@@ -2,12 +2,16 @@ package token
 
 type OperatorPlus struct{}
 
+func NewOperatorPlus() *OperatorPlus {
+	return &OperatorPlus{}
+}
+
 var _ Token = (*OperatorPlus)(nil)
 
 func (*OperatorPlus) Type() Type {
 	return TypeOperatorPlus
 }
 
-func (p *OperatorPlus) String() string {
+func (*OperatorPlus) String() string {
 	return "Operator(+)"
 }

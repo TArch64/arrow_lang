@@ -6,7 +6,7 @@ const (
 	TypeIdentifier Type = iota
 	TypeOperatorPlus
 	TypeOperatorAssign
-	TypeKeywordDef
+	TypeKeywordDefine
 	TypeLiteralInt
 )
 

@@ -20,21 +20,21 @@ func Read(text io.Reader) iter.Seq[Token] {
 		for scanner.Scan() {
 			switch raw := scanner.Text(); raw {
 			case "def":
-				yield(&KeywordDef{})
+				yield(NewKeywordDefine())
 
 			case "=":
-				yield(&OperatorAssign{})
+				yield(NewOperatorAssign())
 
 			case "+":
-				yield(&OperatorPlus{})
+				yield(NewOperatorPlus())
 
 			default:
 				switch {
 				case IntRegexp.MatchString(raw):
 					value, _ := strconv.Atoi(raw)
-					yield(&LiteralInt{Value: value})
+					yield(NewLiteralInt(value))
 				default:
-					yield(&Identifier{Name: raw})
+					yield(NewIdentifier(raw))
 				}
 			}
 		}
