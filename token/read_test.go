@@ -27,6 +27,17 @@ func TestRead(t *testing.T) {
 				NewLiteralInt(1),
 			},
 		},
+		{
+			name: "with newline at eof",
+			text: "def a = 1\n\n",
+
+			expected: []Token{
+				NewKeywordDefine(),
+				NewIdentifier("a"),
+				NewOperatorAssign(),
+				NewLiteralInt(1),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
