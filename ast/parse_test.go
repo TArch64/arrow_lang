@@ -67,7 +67,9 @@ func TestParse(t *testing.T) {
 
 			expectedNode: NewProgram(
 				NewStatement(
-					NewDefine("a", NewExpression(NewLiteralInt(1))),
+					NewDefine("a",
+						NewExpression(NewLiteralInt(1)),
+					),
 				),
 			),
 		},

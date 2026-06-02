@@ -8,8 +8,12 @@ func NewLiteralInt(value int) *LiteralInt {
 	return &LiteralInt{Value: value}
 }
 
-var _ Node = (*LiteralInt)(nil)
+var _ DataNode = (*LiteralInt)(nil)
 
 func (*LiteralInt) Type() Type {
 	return TypeLiteralInt
+}
+
+func (i *LiteralInt) DataType() DataType {
+	return DataInt
 }

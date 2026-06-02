@@ -16,7 +16,7 @@ var (
 	UnexpectedEOFErr   = errext.Tag("ast", errors.New("unexpected EOF"))
 )
 
-func Parse(tokens iter.Seq[token.Token]) (Node, error) {
+func Parse(tokens iter.Seq[token.Token]) (*Program, error) {
 	program := NewProgram()
 	next, stop := iter.Pull(tokens)
 	defer stop()
