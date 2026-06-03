@@ -1,11 +1,11 @@
 package ast
 
 type Program struct {
-	Content []*Statement
+	Statements []*Statement
 }
 
 func NewProgram(content ...*Statement) *Program {
-	return &Program{Content: content}
+	return &Program{Statements: content}
 }
 
 var _ Node = (*Program)(nil)
@@ -15,5 +15,5 @@ func (*Program) Type() Type {
 }
 
 func (p *Program) AddStatement(statement *Statement) {
-	p.Content = append(p.Content, statement)
+	p.Statements = append(p.Statements, statement)
 }

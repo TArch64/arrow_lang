@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"arrow_lang/ast"
+	"arrow_lang/config"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -43,20 +44,46 @@ func TestGenerateDotLL(t *testing.T) {
 			),
 
 			expected: `
+				; ModuleID = 'test.arr'
+				source_filename = "test.arr"
+				target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+				target triple = "arm64-apple-darwin25.5.0"
+
 				define i32 @main() {
 				entry:
-				  %a = alloca i64
-				  store i64 1, ptr %a
+				  %a = alloca i64, align 8
+				  store i64 1, ptr %a, align 8
 				  ret i32 0
-				}`,
+				}
+				`,
 		},
+	}
+
+	baseCompilation := &Compilation{
+		config: &config.Compiler{
+			Output: "/tmp/test.arr",
+		},
+	}
+	if err := initLLVM(baseCompilation); err != nil {
+		t.Error(err)
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			expected := dedent(tc.expected)
-			result := generateDotLL(tc.program)
-			if diff := cmp.Diff(expected, result, multiline); diff != "" {
+
+			result, err := generateDotLL(&Compilation{
+				program:       tc.program,
+				config:        baseCompilation.config,
+				targetMachine: baseCompilation.targetMachine,
+				targetTriple:  baseCompilation.targetTriple,
+			})
+
+			if err != nil {
+				t.Error(err)
+			}
+
+			if diff := cmp.Diff(expected, result.String(), multiline); diff != "" {
 				t.Error(diff)
 			}
 		})

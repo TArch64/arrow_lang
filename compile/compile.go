@@ -1,7 +1,7 @@
 package compile
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
 	"os"
 	"os/exec"
@@ -9,64 +9,125 @@ import (
 
 	"arrow_lang/ast"
 	"arrow_lang/config"
+	"arrow_lang/errext"
+
+	"tinygo.org/x/go-llvm"
 )
 
-func Compile(program *ast.Program, compilerConfig *config.Compiler) error {
-	var tempDir, llFile string
-	if compilerConfig.Debug {
-		tempDir = path.Dir(compilerConfig.Output)
-		llFile = fmt.Sprintf("%s.*.ll", path.Base(compilerConfig.Output))
-	} else {
-		tempDir = path.Join(os.TempDir(), "arrow_lang")
-		llFile = "program.*.ll"
+func Compile(program *ast.Program, compilerConfig *config.Compiler) (err error) {
+	compilation := &Compilation{
+		config:  compilerConfig,
+		program: program,
 	}
-	tempFile, err := os.CreateTemp(tempDir, llFile)
+
+	if err = initLLVM(compilation); err != nil {
+		return errext.Tag("llvm init", err)
+	}
+
+	defer compilation.Dispose()
+
+	dotll, err := generateDotLL(compilation)
 	if err != nil {
-		return err
+		return errext.Tag("llvm dotll", err)
+	}
+
+	err = os.MkdirAll(path.Dir(compilerConfig.Output), 0644)
+	if err != nil {
+		return errext.Tag("llvm create output dir", err)
+	}
+
+	if compilerConfig.Debug {
+		if err = writeDebug(compilation, dotll); err != nil {
+			return errext.Tag("llvm write debug", err)
+		}
+	}
+
+	return llvmCompile(compilation, dotll)
+}
+
+func writeDebug(
+	compilation *Compilation,
+	dotll llvm.Module,
+) error {
+	astInfo, err := json.MarshalIndent(compilation.program, "", "  ")
+	if err != nil {
+		return errext.Tag("llvm json indent", err)
+	}
+
+	dest := compilation.config.Output
+	err = os.WriteFile(dest+".ast.json", astInfo, 0644)
+	if err != nil {
+		return errext.Tag("llvm write ast", err)
+	}
+
+	err = os.WriteFile(dest+".ll", []byte(dotll.String()), 0644)
+	return errext.Tag("llvm dotll", err)
+}
+
+func initLLVM(compilation *Compilation) (err error) {
+	if err = llvm.InitializeNativeTarget(); err != nil {
+		err = errext.Tag("llvm init target", err)
+		return
+	}
+
+	if err = llvm.InitializeNativeAsmPrinter(); err != nil {
+		err = errext.Tag("llvm init asm printer", err)
+		return
+	}
+
+	compilation.targetTriple = llvm.DefaultTargetTriple()
+	target, err := llvm.GetTargetFromTriple(compilation.targetTriple)
+	if err != nil {
+		err = errext.Tag("llvm init target from triple", err)
+		return
+	}
+
+	compilation.targetMachine = target.CreateTargetMachine(
+		compilation.targetTriple,
+		"generic",
+		"",
+		llvm.CodeGenLevelDefault,
+		llvm.RelocPIC,
+		llvm.CodeModelDefault,
+	)
+
+	return
+}
+
+func llvmCompile(compilation *Compilation, dotll llvm.Module) error {
+	objFile, err := os.CreateTemp("", compilation.config.OutputFilename()+".*.o")
+	if err != nil {
+		return errext.Tag("llvm create temp object file", err)
 	}
 
 	defer func() {
-		if err = tempFile.Close(); err != nil {
-			log.Println(err.Error())
+		if err = objFile.Close(); err != nil {
+			err = errext.Tag("llvm close temp object file", err)
+			log.Println(err)
+			return
 		}
-		if !compilerConfig.Debug {
-			if err = os.Remove(tempFile.Name()); err != nil {
-				log.Println(err.Error())
-			}
+
+		if err = os.Remove(objFile.Name()); err != nil {
+			err = errext.Tag("llvm remove temp object file", err)
+			log.Println(err)
 		}
 	}()
 
-	dotll := generateDotLL(program)
-	_, err = tempFile.WriteString(dotll)
+	buf, err := compilation.targetMachine.EmitToMemoryBuffer(dotll, llvm.ObjectFile)
 	if err != nil {
-		return err
+		return errext.Tag("llvm emit to memory buffer", err)
 	}
 
-	return llvmCompile(tempFile.Name(), compilerConfig)
-}
-
-func llvmCompile(input string, compilerConfig *config.Compiler) error {
-	err := os.MkdirAll(path.Dir(compilerConfig.Output), 0644)
+	_, err = objFile.Write(buf.Bytes())
 	if err != nil {
-		return err
+		return errext.Tag("llvm write temp object file", err)
 	}
 
-	var clangArgs []string
-	if compilerConfig.Debug {
-		clangArgs = append(clangArgs, "-g", "-O0")
-	}
-
-	clangArgs = append(clangArgs,
-		input,
-		"-o", compilerConfig.Output,
+	cmd := exec.CommandContext(compilation.config.Ctx,
+		"cc", objFile.Name(), "-o", compilation.config.Output,
 	)
 
-	cmd := exec.CommandContext(compilerConfig.Ctx, "clang", clangArgs...)
-	stdout, err := cmd.Output()
-	if err != nil {
-		return err
-	}
-
-	log.Println(string(stdout))
-	return nil
+	output, err := cmd.CombinedOutput()
+	log.Println(string(output))
+	return errext.Tag("llvm compile object file", err)
 }
