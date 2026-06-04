@@ -1,0 +1,45 @@
+package compile
+
+import (
+	"arrow_lang/ast"
+
+	"tinygo.org/x/go-llvm"
+)
+
+type Generation struct {
+	ctx        llvm.Context
+	mod        llvm.Module
+	builder    llvm.Builder
+	targetData llvm.TargetData
+	std        *GenerationStd
+	defined    map[string]llvm.Value
+}
+
+func (c *Compilation) newGeneration() *Generation {
+	ctx := llvm.NewContext()
+
+	mod := ctx.NewModule(c.config.OutputFilename())
+	mod.SetDataLayout(c.targetMachine.CreateTargetData().String())
+	mod.SetTarget(c.targetTriple)
+
+	generation := &Generation{
+		ctx:        ctx,
+		mod:        mod,
+		builder:    ctx.NewBuilder(),
+		targetData: c.targetData,
+		defined:    make(map[string]llvm.Value),
+	}
+
+	generation.std = generateDotLLStd(generation)
+	return generation
+}
+
+func (c *Generation) astToType(astType ast.DataType) llvm.Type {
+	switch astType {
+	case ast.DataInt:
+		return c.std.i64T
+
+	default:
+		panic("unknown ast type")
+	}
+}

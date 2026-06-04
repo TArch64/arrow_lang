@@ -12,24 +12,33 @@ import (
 type NextToken func() (token.Token, bool)
 
 var (
-	UnexpectedTokenErr = errext.Tag("ast", errors.New("unexpected token"))
-	UnexpectedEOFErr   = errext.Tag("ast", errors.New("unexpected EOF"))
+	UnexpectedTokenErr   = errext.Tag("ast", errors.New("unexpected token"))
+	UnexpectedEOFErr     = errext.Tag("ast", errors.New("unexpected EOF"))
+	UndefinedVariableErr = errext.Tag("ast", errors.New("undefined variable"))
 )
 
 func Parse(tokens iter.Seq[token.Token]) (*Program, error) {
 	program := NewProgram()
-	next, stop := iter.Pull(tokens)
-	defer stop()
+	parsingCtx := NewParsingCtx(tokens)
+	defer parsingCtx.stop()
 
 	for {
-		t, ok := next()
+		t, ok := parsingCtx.next()
 		if !ok {
 			break
 		}
 
 		switch t.Type() {
 		case token.TypeKeywordDefine:
-			statement, err := parseDefine(next)
+			statement, err := parseDefine(parsingCtx)
+			if err != nil {
+				return nil, err
+			}
+
+			program.AddStatement(statement)
+
+		case token.TypeKeywordFree:
+			statement, err := parseFree(parsingCtx)
 			if err != nil {
 				return nil, err
 			}
@@ -43,29 +52,30 @@ func Parse(tokens iter.Seq[token.Token]) (*Program, error) {
 	return program, nil
 }
 
-func parseDefine(next NextToken) (*Statement, error) {
-	nameIdentifier, err := expectToken[*token.Identifier](next, "`def` should be followed by name")
+func parseDefine(ctx *ParsingCtx) (*Statement, error) {
+	nameIdentifier, err := expectToken[*token.Identifier](ctx, "`def` should be followed by name")
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = expectToken[*token.OperatorAssign](next, "`def` should be followed by assign")
+	_, err = expectToken[*token.OperatorAssign](ctx, "`def` should be followed by assign")
 	if err != nil {
 		return nil, err
 	}
 
-	expression, err := parseExpression(next)
+	expression, err := parseExpression(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewStatement(
-		NewDefine(nameIdentifier.Name, expression),
-	), nil
+	define := NewDefine(nameIdentifier.Name, expression)
+	ctx.addDefine(define)
+
+	return NewStatement(define), nil
 }
 
-func expectToken[T token.Token](next NextToken, explain string) (T, error) {
-	t, ok := next()
+func expectToken[T token.Token](ctx *ParsingCtx, explain string) (T, error) {
+	t, ok := ctx.next()
 	var typed T
 
 	if !ok {
@@ -80,8 +90,8 @@ func expectToken[T token.Token](next NextToken, explain string) (T, error) {
 	return typed, nil
 }
 
-func parseExpression(next NextToken) (*Expression, error) {
-	literalInt, err := expectToken[*token.LiteralInt](next, "should be expression")
+func parseExpression(ctx *ParsingCtx) (*Expression, error) {
+	literalInt, err := expectToken[*token.LiteralInt](ctx, "should be expression")
 	if err != nil {
 		return nil, err
 	}
@@ -89,4 +99,17 @@ func parseExpression(next NextToken) (*Expression, error) {
 	return NewExpression(
 		NewLiteralInt(literalInt.Value),
 	), nil
+}
+
+func parseFree(ctx *ParsingCtx) (*Statement, error) {
+	nameIdentifier, err := expectToken[*token.Identifier](ctx, "`free` should be followed by variable name")
+	if err != nil {
+		return nil, err
+	}
+
+	if !ctx.isDefined(nameIdentifier.Name) {
+		return nil, fmt.Errorf("%w: %s", UndefinedVariableErr, nameIdentifier.Name)
+	}
+
+	return NewStatement(NewFree(nameIdentifier.Name)), nil
 }

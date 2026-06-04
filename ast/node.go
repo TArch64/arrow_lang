@@ -6,6 +6,7 @@ const (
 	TypeProgram Type = iota
 	TypeStatement
 	TypeDefine
+	TypeFree
 	TypeExpression
 	TypeLiteralInt
 )

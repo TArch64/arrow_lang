@@ -73,6 +73,27 @@ func TestParse(t *testing.T) {
 				),
 			),
 		},
+		{
+			name: "free: valid syntax",
+
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(1),
+				token.NewKeywordFree(),
+				token.NewIdentifier("a"),
+			},
+
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralInt(1)),
+					),
+				),
+				NewStatement(NewFree("a")),
+			),
+		},
 	}
 
 	for _, tc := range testCases {

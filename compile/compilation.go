@@ -17,8 +17,10 @@ type Compilation struct {
 	program       *ast.Program
 	targetMachine llvm.TargetMachine
 	targetTriple  string
+	targetData    llvm.TargetData
 }
 
 func (c *Compilation) Dispose() {
 	c.targetMachine.Dispose()
+	c.targetData.Dispose()
 }

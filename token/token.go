@@ -7,6 +7,7 @@ const (
 	TypeOperatorPlus
 	TypeOperatorAssign
 	TypeKeywordDefine
+	TypeKeywordFree
 	TypeLiteralInt
 )
 

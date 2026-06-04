@@ -91,6 +91,7 @@ func initLLVM(compilation *Compilation) (err error) {
 		llvm.CodeModelDefault,
 	)
 
+	compilation.targetData = compilation.targetMachine.CreateTargetData()
 	return
 }
 

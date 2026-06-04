@@ -6,46 +6,11 @@ import (
 	"tinygo.org/x/go-llvm"
 )
 
-type Generation struct {
-	ctx     llvm.Context
-	mod     llvm.Module
-	builder llvm.Builder
-
-	i32 llvm.Type
-	i64 llvm.Type
-}
-
-func (c *Compilation) newGeneration() *Generation {
-	ctx := llvm.NewContext()
-
-	mod := ctx.NewModule(c.config.OutputFilename())
-	mod.SetDataLayout(c.targetMachine.CreateTargetData().String())
-	mod.SetTarget(c.targetTriple)
-
-	return &Generation{
-		ctx:     ctx,
-		mod:     mod,
-		builder: ctx.NewBuilder(),
-		i32:     ctx.Int32Type(),
-		i64:     ctx.Int64Type(),
-	}
-}
-
-func (c *Generation) astToType(astType ast.DataType) llvm.Type {
-	switch astType {
-	case ast.DataInt:
-		return c.i64
-
-	default:
-		panic("unknown ast type")
-	}
-}
-
 func generateDotLL(compilation *Compilation) (llvm.Module, error) {
 	generation := compilation.newGeneration()
 
 	mainFn := llvm.AddFunction(generation.mod, "main",
-		llvm.FunctionType(generation.i32, nil, false),
+		llvm.FunctionType(generation.std.i32T, nil, false),
 	)
 
 	entryBlock := generation.ctx.AddBasicBlock(mainFn, "entry")
@@ -56,7 +21,7 @@ func generateDotLL(compilation *Compilation) (llvm.Module, error) {
 	}
 
 	generation.builder.CreateRet(
-		llvm.ConstInt(generation.i32, 0, false),
+		llvm.ConstInt(generation.std.i32T, 0, false),
 	)
 
 	err := llvm.VerifyModule(generation.mod, llvm.PrintMessageAction)
@@ -67,6 +32,8 @@ func generateStatement(generation *Generation, statement *ast.Statement) {
 	switch statement := statement.Content.(type) {
 	case *ast.Define:
 		generateDefine(generation, statement)
+	case *ast.Free:
+		generateFree(generation, statement)
 
 	default:
 		panic("unknown statement type")
@@ -75,10 +42,26 @@ func generateStatement(generation *Generation, statement *ast.Statement) {
 
 func generateDefine(generation *Generation, define *ast.Define) {
 	defType := generation.astToType(define.DataType())
-	alloca := generation.builder.CreateAlloca(defType, define.Name)
+
+	def := generation.builder.CreateCall(
+		generation.std.mallocT,
+		generation.std.malloc,
+		[]llvm.Value{generation.std.sizeOf(defType)},
+		define.Name,
+	)
 
 	literalInt := define.Expression.Content[0].(*ast.LiteralInt)
 	value := llvm.ConstInt(defType, uint64(literalInt.Value), literalInt.Value < 0)
 
-	generation.builder.CreateStore(value, alloca)
+	generation.builder.CreateStore(value, def)
+	generation.defined[define.Name] = def
+}
+
+func generateFree(generation *Generation, free *ast.Free) {
+	generation.builder.CreateCall(
+		generation.std.freeT,
+		generation.std.free,
+		[]llvm.Value{generation.defined[free.Name]},
+		"",
+	)
 }

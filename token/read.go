@@ -22,6 +22,9 @@ func Read(text io.Reader) iter.Seq[Token] {
 			case "def":
 				yield(NewKeywordDefine())
 
+			case "free":
+				yield(NewKeywordFree())
+
 			case "=":
 				yield(NewOperatorAssign())
 
