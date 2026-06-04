@@ -39,6 +39,9 @@ func (c *Generation) astToType(astType ast.DataType) llvm.Type {
 	case ast.DataInt:
 		return c.std.i64T
 
+	case ast.DataFloat:
+		return c.std.doubleT
+
 	default:
 		panic("unknown ast type")
 	}

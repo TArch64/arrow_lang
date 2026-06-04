@@ -9,6 +9,7 @@ const (
 	TypeKeywordDefine
 	TypeKeywordFree
 	TypeLiteralInt
+	TypeLiteralFloat
 )
 
 type Token interface {

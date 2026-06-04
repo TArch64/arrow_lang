@@ -50,11 +50,22 @@ func generateDefine(generation *Generation, define *ast.Define) {
 		define.Name,
 	)
 
-	literalInt := define.Expression.Content[0].(*ast.LiteralInt)
-	value := llvm.ConstInt(defType, uint64(literalInt.Value), literalInt.Value < 0)
-
+	value := generateDefineValue(defType, define.Expression)
 	generation.builder.CreateStore(value, def)
 	generation.defined[define.Name] = def
+}
+
+func generateDefineValue(def llvm.Type, expression *ast.Expression) llvm.Value {
+	switch expression := expression.Content[0].(type) {
+	case *ast.LiteralInt:
+		return llvm.ConstInt(def, uint64(expression.Value), expression.Value < 0)
+
+	case *ast.LiteralFloat:
+		return llvm.ConstFloat(def, expression.Value)
+
+	default:
+		panic("unknown expression type")
+	}
 }
 
 func generateFree(generation *Generation, free *ast.Free) {

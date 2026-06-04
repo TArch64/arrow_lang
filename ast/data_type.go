@@ -4,6 +4,7 @@ type DataType uint8
 
 const (
 	DataInt DataType = iota
+	DataFloat
 )
 
 type DataNode interface {

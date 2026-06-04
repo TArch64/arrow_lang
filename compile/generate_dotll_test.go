@@ -78,6 +78,29 @@ func TestGenerateDotLL(t *testing.T) {
 				}
 				`,
 		},
+
+		{
+			name: "define variable with float",
+
+			program: ast.NewProgram(
+				ast.NewStatement(
+					ast.NewDefine("a",
+						ast.NewExpression(ast.NewLiteralFloat(1.123)),
+					),
+				),
+				ast.NewStatement(ast.NewFree("a")),
+			),
+
+			expected: commonLL + `
+				define i32 @main() {
+				entry:
+				  %a = call ptr @malloc(i64 8)
+				  store double 1.123000e+00, ptr %a, align 8
+				  call void @free(ptr %a)
+				  ret i32 0
+				}
+				`,
+		},
 	}
 
 	baseCompilation := &Compilation{

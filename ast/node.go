@@ -9,6 +9,7 @@ const (
 	TypeFree
 	TypeExpression
 	TypeLiteralInt
+	TypeLiteralFloat
 )
 
 type Node interface {

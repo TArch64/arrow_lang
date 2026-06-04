@@ -19,7 +19,7 @@ func TestRead(t *testing.T) {
 
 	var testCases = []testCase{
 		{
-			name: "define variable with literal int",
+			name: "define variable with int",
 			text: "def a = 1",
 
 			expected: []Token{
@@ -27,6 +27,39 @@ func TestRead(t *testing.T) {
 				NewIdentifier("a"),
 				NewOperatorAssign(),
 				NewLiteralInt(1),
+			},
+		},
+		{
+			name: "define variable with negative int",
+			text: "def a = -1",
+
+			expected: []Token{
+				NewKeywordDefine(),
+				NewIdentifier("a"),
+				NewOperatorAssign(),
+				NewLiteralInt(-1),
+			},
+		},
+		{
+			name: "define variable with float",
+			text: "def a = 1.123",
+
+			expected: []Token{
+				NewKeywordDefine(),
+				NewIdentifier("a"),
+				NewOperatorAssign(),
+				NewLiteralFloat(1.123),
+			},
+		},
+		{
+			name: "define variable with negative float",
+			text: "def a = -1.123",
+
+			expected: []Token{
+				NewKeywordDefine(),
+				NewIdentifier("a"),
+				NewOperatorAssign(),
+				NewLiteralFloat(-1.123),
 			},
 		},
 		{

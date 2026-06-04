@@ -7,11 +7,12 @@ import (
 type GenerationStd struct {
 	targetData llvm.TargetData
 
-	i8T   llvm.Type
-	i32T  llvm.Type
-	i64T  llvm.Type
-	ptrT  llvm.Type
-	voidT llvm.Type
+	i8T     llvm.Type
+	i32T    llvm.Type
+	i64T    llvm.Type
+	doubleT llvm.Type
+	ptrT    llvm.Type
+	voidT   llvm.Type
 
 	malloc  llvm.Value
 	mallocT llvm.Type
@@ -24,10 +25,11 @@ func generateDotLLStd(generation *Generation) *GenerationStd {
 	std := GenerationStd{
 		targetData: generation.targetData,
 
-		i8T:   generation.ctx.Int8Type(),
-		i32T:  generation.ctx.Int32Type(),
-		i64T:  generation.ctx.Int64Type(),
-		voidT: generation.ctx.VoidType(),
+		i8T:     generation.ctx.Int8Type(),
+		i32T:    generation.ctx.Int32Type(),
+		i64T:    generation.ctx.Int64Type(),
+		doubleT: generation.ctx.DoubleType(),
+		voidT:   generation.ctx.VoidType(),
 	}
 
 	std.ptrT = llvm.PointerType(std.i8T, 0)

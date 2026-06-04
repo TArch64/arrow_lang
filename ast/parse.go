@@ -74,31 +74,25 @@ func parseDefine(ctx *ParsingCtx) (*Statement, error) {
 	return NewStatement(define), nil
 }
 
-func expectToken[T token.Token](ctx *ParsingCtx, explain string) (T, error) {
-	t, ok := ctx.next()
-	var typed T
-
-	if !ok {
-		return typed, UnexpectedEOFErr
-	}
-
-	if t.Type() != typed.Type() {
-		return typed, fmt.Errorf("%w: %s, got: %s", UnexpectedTokenErr, explain, t.String())
-	}
-
-	typed = t.(T)
-	return typed, nil
-}
-
 func parseExpression(ctx *ParsingCtx) (*Expression, error) {
-	literalInt, err := expectToken[*token.LiteralInt](ctx, "should be expression")
+	expected, err := expectAnyToken(ctx, "should be an expression",
+		&token.LiteralInt{},
+		&token.LiteralFloat{},
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewExpression(
-		NewLiteralInt(literalInt.Value),
-	), nil
+	switch expected := expected.(type) {
+	case *token.LiteralInt:
+		return NewExpression(NewLiteralInt(expected.Value)), nil
+
+	case *token.LiteralFloat:
+		return NewExpression(NewLiteralFloat(expected.Value)), nil
+
+	default:
+		panic("unreachable")
+	}
 }
 
 func parseFree(ctx *ParsingCtx) (*Statement, error) {

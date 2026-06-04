@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	IntRegexp = regexp.MustCompile(`^\d+$`)
+	IntRegexp   = regexp.MustCompile(`^-?\d+$`)
+	FloatRegexp = regexp.MustCompile(`^-?\d+\.\d+$`)
 )
 
 func Read(text io.Reader) iter.Seq[Token] {
@@ -33,9 +34,14 @@ func Read(text io.Reader) iter.Seq[Token] {
 
 			default:
 				switch {
+				case FloatRegexp.MatchString(raw):
+					value, _ := strconv.ParseFloat(raw, 64)
+					yield(NewLiteralFloat(value))
+
 				case IntRegexp.MatchString(raw):
 					value, _ := strconv.Atoi(raw)
 					yield(NewLiteralInt(value))
+
 				default:
 					yield(NewIdentifier(raw))
 				}

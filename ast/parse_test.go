@@ -56,7 +56,7 @@ func TestParse(t *testing.T) {
 			expectedErr: UnexpectedTokenErr,
 		},
 		{
-			name: "define: variable with literal int",
+			name: "define: variable with int",
 
 			tokens: []token.Token{
 				token.NewKeywordDefine(),
@@ -69,6 +69,60 @@ func TestParse(t *testing.T) {
 				NewStatement(
 					NewDefine("a",
 						NewExpression(NewLiteralInt(1)),
+					),
+				),
+			),
+		},
+		{
+			name: "define: variable with negative int",
+
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(-1),
+			},
+
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralInt(-1)),
+					),
+				),
+			),
+		},
+		{
+			name: "define: variable with float",
+
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralFloat(1.123),
+			},
+
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralFloat(1.123)),
+					),
+				),
+			),
+		},
+		{
+			name: "define: variable with negative float",
+
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralFloat(-1.123),
+			},
+
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralFloat(-1.123)),
 					),
 				),
 			),
