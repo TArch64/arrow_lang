@@ -1,3 +1,4 @@
 dist/*
 !dist/.keep
 !dist/test
+build.env

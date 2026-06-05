@@ -25,6 +25,11 @@ func (e *ParsingExpression) PlusFloat(value float64) {
 	e.nodes = append(e.nodes, e.lastNode)
 }
 
+func (e *ParsingExpression) PlusVariableReference(define *Define) {
+	e.lastNode = NewVariableReference(define)
+	e.nodes = append(e.nodes, e.lastNode)
+}
+
 func (e *ParsingExpression) tryPrecomputePlus(value any) bool {
 	if e.lastNode == nil {
 		return false

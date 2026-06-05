@@ -102,6 +102,24 @@ func TestRead(t *testing.T) {
 				NewLiteralInt(2),
 			},
 		},
+		{
+			name: "assign variable to new variable",
+
+			text: `
+				def a = 1
+				def b = a`,
+
+			expected: []Token{
+				NewKeywordDefine(),
+				NewIdentifier("a"),
+				NewOperatorAssign(),
+				NewLiteralInt(1),
+				NewKeywordDefine(),
+				NewIdentifier("b"),
+				NewOperatorAssign(),
+				NewIdentifier("a"),
+			},
+		},
 	}
 
 	for _, tc := range testCases {

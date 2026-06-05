@@ -145,7 +145,13 @@ func TestParse(t *testing.T) {
 						NewExpression(NewLiteralInt(1)),
 					),
 				),
-				NewStatement(NewFree("a")),
+				NewStatement(
+					NewFree(
+						NewDefine("a",
+							NewExpression(NewLiteralInt(1)),
+						),
+					),
+				),
 			),
 		},
 		{
@@ -177,6 +183,55 @@ func TestParse(t *testing.T) {
 				NewStatement(
 					NewDefine("a",
 						NewExpression(NewLiteralInt(3)),
+					),
+				),
+			),
+		},
+		{
+			name: "define: assign undefined variable",
+
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(1),
+				token.NewKeywordDefine(),
+				token.NewIdentifier("b"),
+				token.NewOperatorAssign(),
+				token.NewIdentifier("c"),
+			},
+
+			expectedErr: UndefinedVariableErr,
+		},
+		{
+			name: "define: assign another variable",
+
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(1),
+				token.NewKeywordDefine(),
+				token.NewIdentifier("b"),
+				token.NewOperatorAssign(),
+				token.NewIdentifier("a"),
+			},
+
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralInt(1)),
+					),
+				),
+				NewStatement(
+					NewDefine("b",
+						NewExpression(
+							NewVariableReference(
+								NewDefine("a",
+									NewExpression(NewLiteralInt(1)),
+								),
+							),
+						),
 					),
 				),
 			),

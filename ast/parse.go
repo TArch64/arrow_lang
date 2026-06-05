@@ -80,6 +80,7 @@ func parseExpression(ctx *ParsingCtx) (*Expression, error) {
 		expected, err := ctx.Seq.ExpectAny("should be an expression",
 			token.TypeLiteralInt,
 			token.TypeLiteralFloat,
+			token.TypeIdentifier,
 		)
 		if err != nil {
 			return nil, err
@@ -91,6 +92,14 @@ func parseExpression(ctx *ParsingCtx) (*Expression, error) {
 
 		case *token.LiteralFloat:
 			expression.PlusFloat(expected.Value)
+
+		case *token.Identifier:
+			define, err := ctx.ExpectDefined(expected)
+			if err != nil {
+				return nil, err
+			}
+
+			expression.PlusVariableReference(define)
 
 		default:
 			panic("unreachable")
@@ -112,9 +121,10 @@ func parseFree(ctx *ParsingCtx) (*Statement, error) {
 		return nil, err
 	}
 
-	if !ctx.IsDefined(nameIdentifier.Name) {
-		return nil, fmt.Errorf("%w: %s", UndefinedVariableErr, nameIdentifier.Name)
+	define, err := ctx.ExpectDefined(nameIdentifier)
+	if err != nil {
+		return nil, err
 	}
 
-	return NewStatement(NewFree(nameIdentifier.Name)), nil
+	return NewStatement(NewFree(define)), nil
 }

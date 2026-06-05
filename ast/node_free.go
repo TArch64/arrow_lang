@@ -5,11 +5,11 @@ import (
 )
 
 type Free struct {
-	Name string
+	Reference *Define
 }
 
-func NewFree(name string) *Free {
-	return &Free{Name: name}
+func NewFree(reference *Define) *Free {
+	return &Free{Reference: reference}
 }
 
 var _ Node = (*Free)(nil)
@@ -21,7 +21,7 @@ func (*Free) Type() Type {
 
 func (f *Free) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"Type": "Free",
-		"Name": f.Name,
+		"Type":      "Free",
+		"Reference": f.Reference.Name,
 	})
 }

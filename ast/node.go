@@ -10,6 +10,7 @@ const (
 	TypeExpression
 	TypeLiteralInt
 	TypeLiteralFloat
+	TypeVariableReference
 )
 
 type Node interface {
