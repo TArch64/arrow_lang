@@ -20,10 +20,10 @@ var (
 func Parse(tokens iter.Seq[token.Token]) (*Program, error) {
 	program := NewProgram()
 	parsingCtx := NewParsingCtx(tokens)
-	defer parsingCtx.stop()
+	defer parsingCtx.Seq.Stop()
 
 	for {
-		t, ok := parsingCtx.next()
+		t, ok := parsingCtx.Seq.Next()
 		if !ok {
 			break
 		}
@@ -53,12 +53,12 @@ func Parse(tokens iter.Seq[token.Token]) (*Program, error) {
 }
 
 func parseDefine(ctx *ParsingCtx) (*Statement, error) {
-	nameIdentifier, err := expectToken[*token.Identifier](ctx, "`def` should be followed by name")
+	nameIdentifier, err := ExpectToken[*token.Identifier](ctx, "`def` should be followed by name")
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = expectToken[*token.OperatorAssign](ctx, "`def` should be followed by assign")
+	_, err = ExpectToken[*token.OperatorAssign](ctx, "`def` should be followed by assign")
 	if err != nil {
 		return nil, err
 	}
@@ -69,39 +69,50 @@ func parseDefine(ctx *ParsingCtx) (*Statement, error) {
 	}
 
 	define := NewDefine(nameIdentifier.Name, expression)
-	ctx.addDefine(define)
+	ctx.AddDefine(define)
 
 	return NewStatement(define), nil
 }
 
 func parseExpression(ctx *ParsingCtx) (*Expression, error) {
-	expected, err := expectAnyToken(ctx, "should be an expression",
-		&token.LiteralInt{},
-		&token.LiteralFloat{},
-	)
-	if err != nil {
-		return nil, err
+	expression := NewParsingExpression()
+	for {
+		expected, err := ctx.Seq.ExpectAny("should be an expression",
+			token.TypeLiteralInt,
+			token.TypeLiteralFloat,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		switch expected := expected.(type) {
+		case *token.LiteralInt:
+			expression.PlusInt(expected.Value)
+
+		case *token.LiteralFloat:
+			expression.PlusFloat(expected.Value)
+
+		default:
+			panic("unreachable")
+		}
+
+		if ctx.Seq.HasNextAny(token.TypeOperatorPlus) {
+			ctx.Seq.Next()
+		} else {
+			break
+		}
 	}
 
-	switch expected := expected.(type) {
-	case *token.LiteralInt:
-		return NewExpression(NewLiteralInt(expected.Value)), nil
-
-	case *token.LiteralFloat:
-		return NewExpression(NewLiteralFloat(expected.Value)), nil
-
-	default:
-		panic("unreachable")
-	}
+	return expression.Build(), nil
 }
 
 func parseFree(ctx *ParsingCtx) (*Statement, error) {
-	nameIdentifier, err := expectToken[*token.Identifier](ctx, "`free` should be followed by variable name")
+	nameIdentifier, err := ExpectToken[*token.Identifier](ctx, "`free` should be followed by variable name")
 	if err != nil {
 		return nil, err
 	}
 
-	if !ctx.isDefined(nameIdentifier.Name) {
+	if !ctx.IsDefined(nameIdentifier.Name) {
 		return nil, fmt.Errorf("%w: %s", UndefinedVariableErr, nameIdentifier.Name)
 	}
 

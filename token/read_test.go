@@ -89,6 +89,19 @@ func TestRead(t *testing.T) {
 				NewIdentifier("a"),
 			},
 		},
+		{
+			name: "define variable with sum ints",
+			text: `def a = 1 + 2`,
+
+			expected: []Token{
+				NewKeywordDefine(),
+				NewIdentifier("a"),
+				NewOperatorAssign(),
+				NewLiteralInt(1),
+				NewOperatorPlus(),
+				NewLiteralInt(2),
+			},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -148,6 +148,39 @@ func TestParse(t *testing.T) {
 				NewStatement(NewFree("a")),
 			),
 		},
+		{
+			name: "define: variable with incomplete sum",
+
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(1),
+				token.NewOperatorAssign(),
+			},
+
+			expectedErr: UnexpectedTokenErr,
+		},
+		{
+			name: "define: variable with sum 2 ints",
+
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(1),
+				token.NewOperatorPlus(),
+				token.NewLiteralInt(2),
+			},
+
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralInt(3)),
+					),
+				),
+			),
+		},
 	}
 
 	for _, tc := range testCases {
