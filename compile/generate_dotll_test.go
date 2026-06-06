@@ -36,8 +36,7 @@ func TestGenerateDotLL(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name: "define variable with literal int",
-
+			name: "basic/define_literal_int",
 			program: ast.NewProgram(
 				ast.NewStatement(
 					ast.NewDefine("a",
@@ -45,7 +44,6 @@ func TestGenerateDotLL(t *testing.T) {
 					),
 				),
 			),
-
 			expected: commonLL + `
 				define i32 @main() {
 				entry:
@@ -55,42 +53,51 @@ func TestGenerateDotLL(t *testing.T) {
 				}
 				`,
 		},
-
 		{
-			name: "define variable with int and free",
-
-			program: func() *ast.Program {
-				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(1)))
-
-				return ast.NewProgram(
-					ast.NewStatement(defA),
-					ast.NewStatement(ast.NewFree(defA)),
-				)
-			}(),
-
+			name: "basic/define_negative_int",
+			program: ast.NewProgram(
+				ast.NewStatement(
+					ast.NewDefine("a",
+						ast.NewExpression(ast.NewLiteralInt(-42)),
+					),
+				),
+			),
 			expected: commonLL + `
 				define i32 @main() {
 				entry:
 				  %a_1 = call ptr @malloc(i64 8)
-				  store i64 1, ptr %a_1, align 8
-				  call void @free(ptr %a_1)
+				  store i64 -42, ptr %a_1, align 8
 				  ret i32 0
 				}
 				`,
 		},
-
 		{
-			name: "define variable with float",
-
+			name: "basic/define_zero_int",
+			program: ast.NewProgram(
+				ast.NewStatement(
+					ast.NewDefine("zero",
+						ast.NewExpression(ast.NewLiteralInt(0)),
+					),
+				),
+			),
+			expected: commonLL + `
+				define i32 @main() {
+				entry:
+				  %zero_1 = call ptr @malloc(i64 8)
+				  store i64 0, ptr %zero_1, align 8
+				  ret i32 0
+				}
+				`,
+		},
+		{
+			name: "basic/define_float",
 			program: func() *ast.Program {
 				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralFloat(1.123)))
-
 				return ast.NewProgram(
 					ast.NewStatement(defA),
 					ast.NewStatement(ast.NewFree(defA)),
 				)
 			}(),
-
 			expected: commonLL + `
 				define i32 @main() {
 				entry:
@@ -101,13 +108,84 @@ func TestGenerateDotLL(t *testing.T) {
 				}
 				`,
 		},
-
 		{
-			name: "define variable with assign to variable",
-
+			name: "basic/define_negative_float",
+			program: ast.NewProgram(
+				ast.NewStatement(
+					ast.NewDefine("neg",
+						ast.NewExpression(ast.NewLiteralFloat(-3.14)),
+					),
+				),
+			),
+			expected: commonLL + `
+				define i32 @main() {
+				entry:
+				  %neg_1 = call ptr @malloc(i64 8)
+				  store double -3.140000e+00, ptr %neg_1, align 8
+				  ret i32 0
+				}
+				`,
+		},
+		{
+			name: "basic/define_zero_float",
+			program: ast.NewProgram(
+				ast.NewStatement(
+					ast.NewDefine("zero",
+						ast.NewExpression(ast.NewLiteralFloat(0.0)),
+					),
+				),
+			),
+			expected: commonLL + `
+				define i32 @main() {
+				entry:
+				  %zero_1 = call ptr @malloc(i64 8)
+				  store double 0.000000e+00, ptr %zero_1, align 8
+				  ret i32 0
+				}
+				`,
+		},
+		{
+			name: "memory/define_and_free_int",
 			program: func() *ast.Program {
 				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(1)))
-
+				return ast.NewProgram(
+					ast.NewStatement(defA),
+					ast.NewStatement(ast.NewFree(defA)),
+				)
+			}(),
+			expected: commonLL + `
+				define i32 @main() {
+				entry:
+				  %a_1 = call ptr @malloc(i64 8)
+				  store i64 1, ptr %a_1, align 8
+				  call void @free(ptr %a_1)
+				  ret i32 0
+				}
+				`,
+		},
+		{
+			name: "memory/define_and_free_float",
+			program: func() *ast.Program {
+				defA := ast.NewDefine("pi", ast.NewExpression(ast.NewLiteralFloat(3.14159)))
+				return ast.NewProgram(
+					ast.NewStatement(defA),
+					ast.NewStatement(ast.NewFree(defA)),
+				)
+			}(),
+			expected: commonLL + `
+				define i32 @main() {
+				entry:
+				  %pi_1 = call ptr @malloc(i64 8)
+				  store double 3.141590e+00, ptr %pi_1, align 8
+				  call void @free(ptr %pi_1)
+				  ret i32 0
+				}
+				`,
+		},
+		{
+			name: "variables/assign_int_to_variable",
+			program: func() *ast.Program {
+				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(1)))
 				return ast.NewProgram(
 					ast.NewStatement(defA),
 					ast.NewStatement(
@@ -117,7 +195,6 @@ func TestGenerateDotLL(t *testing.T) {
 					),
 				)
 			}(),
-
 			expected: commonLL + `
 			define i32 @main() {
 			entry:
@@ -130,13 +207,35 @@ func TestGenerateDotLL(t *testing.T) {
 			}
 			`,
 		},
-
 		{
-			name: "define variable with sum of variable and literal",
-
+			name: "variables/assign_float_to_variable",
+			program: func() *ast.Program {
+				defA := ast.NewDefine("original", ast.NewExpression(ast.NewLiteralFloat(2.718)))
+				return ast.NewProgram(
+					ast.NewStatement(defA),
+					ast.NewStatement(
+						ast.NewDefine("copy",
+							ast.NewExpression(ast.NewVariableReference(defA)),
+						),
+					),
+				)
+			}(),
+			expected: commonLL + `
+			define i32 @main() {
+			entry:
+			  %original_1 = call ptr @malloc(i64 8)
+			  store double 2.718000e+00, ptr %original_1, align 8
+			  %copy_2 = call ptr @malloc(i64 8)
+			  %original_v_3 = load double, ptr %original_1, align 8
+			  store double %original_v_3, ptr %copy_2, align 8
+			  ret i32 0
+			}
+			`,
+		},
+		{
+			name: "expressions/sum_variable_and_literal",
 			program: func() *ast.Program {
 				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(1)))
-
 				return ast.NewProgram(
 					ast.NewStatement(defA),
 					ast.NewStatement(
@@ -151,7 +250,6 @@ func TestGenerateDotLL(t *testing.T) {
 					),
 				)
 			}(),
-
 			expected: commonLL + `
 			define i32 @main() {
 			entry:
@@ -161,6 +259,79 @@ func TestGenerateDotLL(t *testing.T) {
 			  %a_v_3 = load i64, ptr %a_1, align 8
 			  %_4 = add i64 %a_v_3, 2
 			  store i64 %_4, ptr %b_2, align 8
+			  ret i32 0
+			}
+			`,
+		},
+		{
+			name: "expressions/sum_two_variables",
+			program: func() *ast.Program {
+				defX := ast.NewDefine("x", ast.NewExpression(ast.NewLiteralInt(5)))
+				defY := ast.NewDefine("y", ast.NewExpression(ast.NewLiteralInt(10)))
+				return ast.NewProgram(
+					ast.NewStatement(defX),
+					ast.NewStatement(defY),
+					ast.NewStatement(
+						ast.NewDefine("sum",
+							ast.NewExpression(
+								ast.NewExpressionSum(
+									ast.NewVariableReference(defX),
+									ast.NewVariableReference(defY),
+								),
+							),
+						),
+					),
+				)
+			}(),
+			expected: commonLL + `
+			define i32 @main() {
+			entry:
+			  %x_1 = call ptr @malloc(i64 8)
+			  store i64 5, ptr %x_1, align 8
+			  %y_2 = call ptr @malloc(i64 8)
+			  store i64 10, ptr %y_2, align 8
+			  %sum_3 = call ptr @malloc(i64 8)
+			  %x_v_4 = load i64, ptr %x_1, align 8
+			  %y_v_5 = load i64, ptr %y_2, align 8
+			  %_6 = add i64 %x_v_4, %y_v_5
+			  store i64 %_6, ptr %sum_3, align 8
+			  ret i32 0
+			}
+			`,
+		},
+		{
+			name: "complex/multiple_operations",
+			program: func() *ast.Program {
+				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(100)))
+				defB := ast.NewDefine("b", ast.NewExpression(ast.NewVariableReference(defA)))
+				defC := ast.NewDefine("c", ast.NewExpression(
+					ast.NewExpressionSum(
+						ast.NewVariableReference(defB),
+						ast.NewLiteralInt(50),
+					),
+				))
+				return ast.NewProgram(
+					ast.NewStatement(defA),
+					ast.NewStatement(defB),
+					ast.NewStatement(defC),
+					ast.NewStatement(ast.NewFree(defA)),
+					ast.NewStatement(ast.NewFree(defB)),
+				)
+			}(),
+			expected: commonLL + `
+			define i32 @main() {
+			entry:
+			  %a_1 = call ptr @malloc(i64 8)
+			  store i64 100, ptr %a_1, align 8
+			  %b_2 = call ptr @malloc(i64 8)
+			  %a_v_3 = load i64, ptr %a_1, align 8
+			  store i64 %a_v_3, ptr %b_2, align 8
+			  %c_4 = call ptr @malloc(i64 8)
+			  %b_v_5 = load i64, ptr %b_2, align 8
+			  %_6 = add i64 %b_v_5, 50
+			  store i64 %_6, ptr %c_4, align 8
+			  call void @free(ptr %a_1)
+			  call void @free(ptr %b_2)
 			  ret i32 0
 			}
 			`,
