@@ -19,8 +19,8 @@ var multiline = cmpopts.AcyclicTransformer("multiline", func(s string) []string 
 func TestGenerateDotLL(t *testing.T) {
 	type testCase struct {
 		name     string
-		program  *ast.Program
-		expected string
+		program  func() *ast.Program
+		expected func() string
 	}
 
 	const commonLL = `
@@ -37,57 +37,69 @@ func TestGenerateDotLL(t *testing.T) {
 	testCases := []testCase{
 		{
 			name: "basic/define_literal_int",
-			program: ast.NewProgram(
-				ast.NewStatement(
-					ast.NewDefine("a",
-						ast.NewExpression(ast.NewLiteralInt(1)),
+			program: func() *ast.Program {
+				return ast.NewProgram(
+					ast.NewStatement(
+						ast.NewDefine("a",
+							ast.NewExpression(ast.NewLiteralInt(1)),
+						),
 					),
-				),
-			),
-			expected: commonLL + `
+				)
+			},
+			expected: func() string {
+				return commonLL + `
 				define i32 @main() {
 				entry:
 				  %a_1 = call ptr @malloc(i64 8)
 				  store i64 1, ptr %a_1, align 8
 				  ret i32 0
 				}
-				`,
+				`
+			},
 		},
 		{
 			name: "basic/define_negative_int",
-			program: ast.NewProgram(
-				ast.NewStatement(
-					ast.NewDefine("a",
-						ast.NewExpression(ast.NewLiteralInt(-42)),
+			program: func() *ast.Program {
+				return ast.NewProgram(
+					ast.NewStatement(
+						ast.NewDefine("a",
+							ast.NewExpression(ast.NewLiteralInt(-42)),
+						),
 					),
-				),
-			),
-			expected: commonLL + `
+				)
+			},
+			expected: func() string {
+				return commonLL + `
 				define i32 @main() {
 				entry:
 				  %a_1 = call ptr @malloc(i64 8)
 				  store i64 -42, ptr %a_1, align 8
 				  ret i32 0
 				}
-				`,
+				`
+			},
 		},
 		{
 			name: "basic/define_zero_int",
-			program: ast.NewProgram(
-				ast.NewStatement(
-					ast.NewDefine("zero",
-						ast.NewExpression(ast.NewLiteralInt(0)),
+			program: func() *ast.Program {
+				return ast.NewProgram(
+					ast.NewStatement(
+						ast.NewDefine("zero",
+							ast.NewExpression(ast.NewLiteralInt(0)),
+						),
 					),
-				),
-			),
-			expected: commonLL + `
+				)
+			},
+			expected: func() string {
+				return commonLL + `
 				define i32 @main() {
 				entry:
 				  %zero_1 = call ptr @malloc(i64 8)
 				  store i64 0, ptr %zero_1, align 8
 				  ret i32 0
 				}
-				`,
+				`
+			},
 		},
 		{
 			name: "basic/define_float",
@@ -97,8 +109,9 @@ func TestGenerateDotLL(t *testing.T) {
 					ast.NewStatement(defA),
 					ast.NewStatement(ast.NewFree(defA)),
 				)
-			}(),
-			expected: commonLL + `
+			},
+			expected: func() string {
+				return commonLL + `
 				define i32 @main() {
 				entry:
 				  %a_1 = call ptr @malloc(i64 8)
@@ -106,43 +119,52 @@ func TestGenerateDotLL(t *testing.T) {
 				  call void @free(ptr %a_1)
 				  ret i32 0
 				}
-				`,
+				`
+			},
 		},
 		{
 			name: "basic/define_negative_float",
-			program: ast.NewProgram(
-				ast.NewStatement(
-					ast.NewDefine("neg",
-						ast.NewExpression(ast.NewLiteralFloat(-3.14)),
+			program: func() *ast.Program {
+				return ast.NewProgram(
+					ast.NewStatement(
+						ast.NewDefine("neg",
+							ast.NewExpression(ast.NewLiteralFloat(-3.14)),
+						),
 					),
-				),
-			),
-			expected: commonLL + `
+				)
+			},
+			expected: func() string {
+				return commonLL + `
 				define i32 @main() {
 				entry:
 				  %neg_1 = call ptr @malloc(i64 8)
 				  store double -3.140000e+00, ptr %neg_1, align 8
 				  ret i32 0
 				}
-				`,
+				`
+			},
 		},
 		{
 			name: "basic/define_zero_float",
-			program: ast.NewProgram(
-				ast.NewStatement(
-					ast.NewDefine("zero",
-						ast.NewExpression(ast.NewLiteralFloat(0.0)),
+			program: func() *ast.Program {
+				return ast.NewProgram(
+					ast.NewStatement(
+						ast.NewDefine("zero",
+							ast.NewExpression(ast.NewLiteralFloat(0.0)),
+						),
 					),
-				),
-			),
-			expected: commonLL + `
+				)
+			},
+			expected: func() string {
+				return commonLL + `
 				define i32 @main() {
 				entry:
 				  %zero_1 = call ptr @malloc(i64 8)
 				  store double 0.000000e+00, ptr %zero_1, align 8
 				  ret i32 0
 				}
-				`,
+				`
+			},
 		},
 		{
 			name: "memory/define_and_free_int",
@@ -152,8 +174,9 @@ func TestGenerateDotLL(t *testing.T) {
 					ast.NewStatement(defA),
 					ast.NewStatement(ast.NewFree(defA)),
 				)
-			}(),
-			expected: commonLL + `
+			},
+			expected: func() string {
+				return commonLL + `
 				define i32 @main() {
 				entry:
 				  %a_1 = call ptr @malloc(i64 8)
@@ -161,7 +184,8 @@ func TestGenerateDotLL(t *testing.T) {
 				  call void @free(ptr %a_1)
 				  ret i32 0
 				}
-				`,
+				`
+			},
 		},
 		{
 			name: "memory/define_and_free_float",
@@ -171,8 +195,9 @@ func TestGenerateDotLL(t *testing.T) {
 					ast.NewStatement(defA),
 					ast.NewStatement(ast.NewFree(defA)),
 				)
-			}(),
-			expected: commonLL + `
+			},
+			expected: func() string {
+				return commonLL + `
 				define i32 @main() {
 				entry:
 				  %pi_1 = call ptr @malloc(i64 8)
@@ -180,7 +205,8 @@ func TestGenerateDotLL(t *testing.T) {
 				  call void @free(ptr %pi_1)
 				  ret i32 0
 				}
-				`,
+				`
+			},
 		},
 		{
 			name: "variables/assign_int_to_variable",
@@ -194,18 +220,20 @@ func TestGenerateDotLL(t *testing.T) {
 						),
 					),
 				)
-			}(),
-			expected: commonLL + `
-			define i32 @main() {
-			entry:
-			  %a_1 = call ptr @malloc(i64 8)
-			  store i64 1, ptr %a_1, align 8
-			  %b_2 = call ptr @malloc(i64 8)
-			  %a_v_3 = load i64, ptr %a_1, align 8
-			  store i64 %a_v_3, ptr %b_2, align 8
-			  ret i32 0
-			}
-			`,
+			},
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %a_1 = call ptr @malloc(i64 8)
+				  store i64 1, ptr %a_1, align 8
+				  %b_2 = call ptr @malloc(i64 8)
+				  %a_v_3 = load i64, ptr %a_1, align 8
+				  store i64 %a_v_3, ptr %b_2, align 8
+				  ret i32 0
+				}
+				`
+			},
 		},
 		{
 			name: "variables/assign_float_to_variable",
@@ -219,18 +247,20 @@ func TestGenerateDotLL(t *testing.T) {
 						),
 					),
 				)
-			}(),
-			expected: commonLL + `
-			define i32 @main() {
-			entry:
-			  %original_1 = call ptr @malloc(i64 8)
-			  store double 2.718000e+00, ptr %original_1, align 8
-			  %copy_2 = call ptr @malloc(i64 8)
-			  %original_v_3 = load double, ptr %original_1, align 8
-			  store double %original_v_3, ptr %copy_2, align 8
-			  ret i32 0
-			}
-			`,
+			},
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %original_1 = call ptr @malloc(i64 8)
+				  store double 2.718000e+00, ptr %original_1, align 8
+				  %copy_2 = call ptr @malloc(i64 8)
+				  %original_v_3 = load double, ptr %original_1, align 8
+				  store double %original_v_3, ptr %copy_2, align 8
+				  ret i32 0
+				}
+				`
+			},
 		},
 		{
 			name: "expressions/sum_variable_and_literal",
@@ -249,19 +279,21 @@ func TestGenerateDotLL(t *testing.T) {
 						),
 					),
 				)
-			}(),
-			expected: commonLL + `
-			define i32 @main() {
-			entry:
-			  %a_1 = call ptr @malloc(i64 8)
-			  store i64 1, ptr %a_1, align 8
-			  %b_2 = call ptr @malloc(i64 8)
-			  %a_v_3 = load i64, ptr %a_1, align 8
-			  %_4 = add i64 %a_v_3, 2
-			  store i64 %_4, ptr %b_2, align 8
-			  ret i32 0
-			}
-			`,
+			},
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %a_1 = call ptr @malloc(i64 8)
+				  store i64 1, ptr %a_1, align 8
+				  %b_2 = call ptr @malloc(i64 8)
+				  %a_v_3 = load i64, ptr %a_1, align 8
+				  %_4 = add i64 %a_v_3, 2
+				  store i64 %_4, ptr %b_2, align 8
+				  ret i32 0
+				}
+				`
+			},
 		},
 		{
 			name: "expressions/sum_two_variables",
@@ -282,22 +314,24 @@ func TestGenerateDotLL(t *testing.T) {
 						),
 					),
 				)
-			}(),
-			expected: commonLL + `
-			define i32 @main() {
-			entry:
-			  %x_1 = call ptr @malloc(i64 8)
-			  store i64 5, ptr %x_1, align 8
-			  %y_2 = call ptr @malloc(i64 8)
-			  store i64 10, ptr %y_2, align 8
-			  %sum_3 = call ptr @malloc(i64 8)
-			  %x_v_4 = load i64, ptr %x_1, align 8
-			  %y_v_5 = load i64, ptr %y_2, align 8
-			  %_6 = add i64 %x_v_4, %y_v_5
-			  store i64 %_6, ptr %sum_3, align 8
-			  ret i32 0
-			}
-			`,
+			},
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %x_1 = call ptr @malloc(i64 8)
+				  store i64 5, ptr %x_1, align 8
+				  %y_2 = call ptr @malloc(i64 8)
+				  store i64 10, ptr %y_2, align 8
+				  %sum_3 = call ptr @malloc(i64 8)
+				  %x_v_4 = load i64, ptr %x_1, align 8
+				  %y_v_5 = load i64, ptr %y_2, align 8
+				  %_6 = add i64 %x_v_4, %y_v_5
+				  store i64 %_6, ptr %sum_3, align 8
+				  ret i32 0
+				}
+				`
+			},
 		},
 		{
 			name: "complex/multiple_operations",
@@ -317,24 +351,26 @@ func TestGenerateDotLL(t *testing.T) {
 					ast.NewStatement(ast.NewFree(defA)),
 					ast.NewStatement(ast.NewFree(defB)),
 				)
-			}(),
-			expected: commonLL + `
-			define i32 @main() {
-			entry:
-			  %a_1 = call ptr @malloc(i64 8)
-			  store i64 100, ptr %a_1, align 8
-			  %b_2 = call ptr @malloc(i64 8)
-			  %a_v_3 = load i64, ptr %a_1, align 8
-			  store i64 %a_v_3, ptr %b_2, align 8
-			  %c_4 = call ptr @malloc(i64 8)
-			  %b_v_5 = load i64, ptr %b_2, align 8
-			  %_6 = add i64 %b_v_5, 50
-			  store i64 %_6, ptr %c_4, align 8
-			  call void @free(ptr %a_1)
-			  call void @free(ptr %b_2)
-			  ret i32 0
-			}
-			`,
+			},
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %a_1 = call ptr @malloc(i64 8)
+				  store i64 100, ptr %a_1, align 8
+				  %b_2 = call ptr @malloc(i64 8)
+				  %a_v_3 = load i64, ptr %a_1, align 8
+				  store i64 %a_v_3, ptr %b_2, align 8
+				  %c_4 = call ptr @malloc(i64 8)
+				  %b_v_5 = load i64, ptr %b_2, align 8
+				  %_6 = add i64 %b_v_5, 50
+				  store i64 %_6, ptr %c_4, align 8
+				  call void @free(ptr %a_1)
+				  call void @free(ptr %b_2)
+				  ret i32 0
+				}
+				`
+			},
 		},
 	}
 
@@ -351,7 +387,7 @@ func TestGenerateDotLL(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			compilation := &Compilation{
-				program:       tc.program,
+				program:       tc.program(),
 				config:        baseCompilation.config,
 				targetMachine: baseCompilation.targetMachine,
 				targetTriple:  baseCompilation.targetTriple,
@@ -363,7 +399,7 @@ func TestGenerateDotLL(t *testing.T) {
 				t.Error(err)
 			}
 
-			expected := testutil.Dedent(tc.expected)
+			expected := testutil.Dedent(tc.expected())
 			if diff := cmp.Diff(expected, result.String(), multiline); diff != "" {
 				t.Error(diff)
 			}
