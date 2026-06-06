@@ -20,139 +20,37 @@ func TestParse(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:        "define: eof after def",
+			name:        "error_cases/define_eof_after_keyword",
 			tokens:      []token.Token{token.NewKeywordDefine()},
 			expectedErr: UnexpectedEOFErr,
 		},
 		{
-			name: "define: invalid token after def",
-
+			name: "error_cases/define_invalid_token_after_keyword",
 			tokens: []token.Token{
 				token.NewKeywordDefine(),
 				token.NewOperatorAssign(),
 			},
-
 			expectedErr: UnexpectedTokenErr,
 		},
 		{
-			name: "define: eof after name",
-
+			name: "error_cases/define_eof_after_identifier",
 			tokens: []token.Token{
 				token.NewKeywordDefine(),
 				token.NewIdentifier("a"),
 			},
-
 			expectedErr: UnexpectedEOFErr,
 		},
 		{
-			name: "define: invalid token after name",
-
+			name: "error_cases/define_invalid_token_after_identifier",
 			tokens: []token.Token{
 				token.NewKeywordDefine(),
 				token.NewIdentifier("a"),
 				token.NewOperatorPlus(),
 			},
-
 			expectedErr: UnexpectedTokenErr,
 		},
 		{
-			name: "define: variable with int",
-
-			tokens: []token.Token{
-				token.NewKeywordDefine(),
-				token.NewIdentifier("a"),
-				token.NewOperatorAssign(),
-				token.NewLiteralInt(1),
-			},
-
-			expectedNode: NewProgram(
-				NewStatement(
-					NewDefine("a",
-						NewExpression(NewLiteralInt(1)),
-					),
-				),
-			),
-		},
-		{
-			name: "define: variable with negative int",
-
-			tokens: []token.Token{
-				token.NewKeywordDefine(),
-				token.NewIdentifier("a"),
-				token.NewOperatorAssign(),
-				token.NewLiteralInt(-1),
-			},
-
-			expectedNode: NewProgram(
-				NewStatement(
-					NewDefine("a",
-						NewExpression(NewLiteralInt(-1)),
-					),
-				),
-			),
-		},
-		{
-			name: "define: variable with float",
-
-			tokens: []token.Token{
-				token.NewKeywordDefine(),
-				token.NewIdentifier("a"),
-				token.NewOperatorAssign(),
-				token.NewLiteralFloat(1.123),
-			},
-
-			expectedNode: NewProgram(
-				NewStatement(
-					NewDefine("a",
-						NewExpression(NewLiteralFloat(1.123)),
-					),
-				),
-			),
-		},
-		{
-			name: "define: variable with negative float",
-
-			tokens: []token.Token{
-				token.NewKeywordDefine(),
-				token.NewIdentifier("a"),
-				token.NewOperatorAssign(),
-				token.NewLiteralFloat(-1.123),
-			},
-
-			expectedNode: NewProgram(
-				NewStatement(
-					NewDefine("a",
-						NewExpression(NewLiteralFloat(-1.123)),
-					),
-				),
-			),
-		},
-		{
-			name: "free: valid syntax",
-
-			tokens: []token.Token{
-				token.NewKeywordDefine(),
-				token.NewIdentifier("a"),
-				token.NewOperatorAssign(),
-				token.NewLiteralInt(1),
-				token.NewKeywordFree(),
-				token.NewIdentifier("a"),
-			},
-
-			expectedNode: func() Node {
-				defA := NewDefine("a",
-					NewExpression(NewLiteralInt(1)),
-				)
-
-				return NewProgram(
-					NewStatement(defA),
-					NewStatement(NewFree(defA)),
-				)
-			}(),
-		},
-		{
-			name: "define: variable with incomplete sum",
-
+			name: "error_cases/expression_incomplete_sum",
 			tokens: []token.Token{
 				token.NewKeywordDefine(),
 				token.NewIdentifier("a"),
@@ -160,32 +58,10 @@ func TestParse(t *testing.T) {
 				token.NewLiteralInt(1),
 				token.NewOperatorAssign(),
 			},
-
 			expectedErr: UnexpectedTokenErr,
 		},
 		{
-			name: "define: variable with sum 2 ints",
-
-			tokens: []token.Token{
-				token.NewKeywordDefine(),
-				token.NewIdentifier("a"),
-				token.NewOperatorAssign(),
-				token.NewLiteralInt(1),
-				token.NewOperatorPlus(),
-				token.NewLiteralInt(2),
-			},
-
-			expectedNode: NewProgram(
-				NewStatement(
-					NewDefine("a",
-						NewExpression(NewLiteralInt(3)),
-					),
-				),
-			),
-		},
-		{
-			name: "define: assign undefined variable",
-
+			name: "error_cases/undefined_variable_reference",
 			tokens: []token.Token{
 				token.NewKeywordDefine(),
 				token.NewIdentifier("a"),
@@ -196,12 +72,112 @@ func TestParse(t *testing.T) {
 				token.NewOperatorAssign(),
 				token.NewIdentifier("c"),
 			},
-
 			expectedErr: UndefinedVariableErr,
 		},
 		{
-			name: "define: assign another variable",
-
+			name: "basic/define_int",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(1),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralInt(1)),
+					),
+				),
+			),
+		},
+		{
+			name: "basic/define_negative_int",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(-1),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralInt(-1)),
+					),
+				),
+			),
+		},
+		{
+			name: "basic/define_float",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralFloat(1.123),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralFloat(1.123)),
+					),
+				),
+			),
+		},
+		{
+			name: "basic/define_negative_float",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralFloat(-1.123),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralFloat(-1.123)),
+					),
+				),
+			),
+		},
+		{
+			name: "basic/free_variable",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(1),
+				token.NewKeywordFree(),
+				token.NewIdentifier("a"),
+			},
+			expectedNode: func() Node {
+				defA := NewDefine("a",
+					NewExpression(NewLiteralInt(1)),
+				)
+				return NewProgram(
+					NewStatement(defA),
+					NewStatement(NewFree(defA)),
+				)
+			}(),
+		},
+		{
+			name: "expressions/sum_two_integers",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(1),
+				token.NewOperatorPlus(),
+				token.NewLiteralInt(2),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("a",
+						NewExpression(NewLiteralInt(3)),
+					),
+				),
+			),
+		},
+		{
+			name: "variables/assign_variable_to_variable",
 			tokens: []token.Token{
 				token.NewKeywordDefine(),
 				token.NewIdentifier("a"),
@@ -212,12 +188,10 @@ func TestParse(t *testing.T) {
 				token.NewOperatorAssign(),
 				token.NewIdentifier("a"),
 			},
-
 			expectedNode: func() Node {
 				defA := NewDefine("a",
 					NewExpression(NewLiteralInt(1)),
 				)
-
 				return NewProgram(
 					NewStatement(defA),
 					NewStatement(
@@ -229,8 +203,7 @@ func TestParse(t *testing.T) {
 			}(),
 		},
 		{
-			name: "define: variable with sum of another variable and literal",
-
+			name: "expressions/sum_variable_and_literal",
 			tokens: []token.Token{
 				token.NewKeywordDefine(),
 				token.NewIdentifier("a"),
@@ -243,10 +216,8 @@ func TestParse(t *testing.T) {
 				token.NewOperatorPlus(),
 				token.NewLiteralInt(2),
 			},
-
 			expectedNode: func() Node {
 				defA := NewDefine("a", NewExpression(NewLiteralInt(1)))
-
 				return NewProgram(
 					NewStatement(defA),
 					NewStatement(
@@ -259,6 +230,170 @@ func TestParse(t *testing.T) {
 							),
 						),
 					),
+				)
+			}(),
+		},
+		{
+			name: "numbers/zero_integer",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("zero"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(0),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("zero",
+						NewExpression(NewLiteralInt(0)),
+					),
+				),
+			),
+		},
+		{
+			name: "numbers/large_integer",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("big"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(999999999),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("big",
+						NewExpression(NewLiteralInt(999999999)),
+					),
+				),
+			),
+		},
+		{
+			name: "numbers/float_zero_fractional",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("val"),
+				token.NewOperatorAssign(),
+				token.NewLiteralFloat(5.0),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("val",
+						NewExpression(NewLiteralFloat(5.0)),
+					),
+				),
+			),
+		},
+		{
+			name: "numbers/float_leading_zero",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("small"),
+				token.NewOperatorAssign(),
+				token.NewLiteralFloat(0.5),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("small",
+						NewExpression(NewLiteralFloat(0.5)),
+					),
+				),
+			),
+		},
+		{
+			name: "expressions/sum_two_floats",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("result"),
+				token.NewOperatorAssign(),
+				token.NewLiteralFloat(1.5),
+				token.NewOperatorPlus(),
+				token.NewLiteralFloat(2.5),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("result",
+						NewExpression(NewLiteralFloat(4.0)),
+					),
+				),
+			),
+		},
+		{
+			name: "expressions/sum_mixed_int_float",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("mixed"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(1),
+				token.NewOperatorPlus(),
+				token.NewLiteralFloat(2.5),
+			},
+			expectedNode: NewProgram(
+				NewStatement(
+					NewDefine("mixed",
+						NewExpression(NewLiteralFloat(3.5)),
+					),
+				),
+			),
+		},
+		{
+			name: "complex/multiple_statements",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("x"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(10),
+				token.NewKeywordDefine(),
+				token.NewIdentifier("y"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(20),
+				token.NewKeywordDefine(),
+				token.NewIdentifier("sum"),
+				token.NewOperatorAssign(),
+				token.NewIdentifier("x"),
+				token.NewOperatorPlus(),
+				token.NewIdentifier("y"),
+			},
+			expectedNode: func() Node {
+				defX := NewDefine("x", NewExpression(NewLiteralInt(10)))
+				defY := NewDefine("y", NewExpression(NewLiteralInt(20)))
+				return NewProgram(
+					NewStatement(defX),
+					NewStatement(defY),
+					NewStatement(
+						NewDefine("sum",
+							NewExpression(
+								NewExpressionSum(
+									NewVariableReference(defX),
+									NewVariableReference(defY),
+								),
+							),
+						),
+					),
+				)
+			}(),
+		},
+		{
+			name: "complex/define_and_free_sequence",
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("temp"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(42),
+				token.NewKeywordDefine(),
+				token.NewIdentifier("copy"),
+				token.NewOperatorAssign(),
+				token.NewIdentifier("temp"),
+				token.NewKeywordFree(),
+				token.NewIdentifier("temp"),
+			},
+			expectedNode: func() Node {
+				defTemp := NewDefine("temp", NewExpression(NewLiteralInt(42)))
+				return NewProgram(
+					NewStatement(defTemp),
+					NewStatement(
+						NewDefine("copy",
+							NewExpression(NewVariableReference(defTemp)),
+						),
+					),
+					NewStatement(NewFree(defTemp)),
 				)
 			}(),
 		},
