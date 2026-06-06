@@ -6,6 +6,7 @@ import (
 )
 
 type Compiler struct {
+	Input  string
 	Output string
 	Debug  bool
 	Ctx    context.Context

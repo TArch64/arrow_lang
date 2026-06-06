@@ -13,22 +13,25 @@ import (
 )
 
 func main() {
-	var input, output string
-	var debug bool
-	flag.StringVar(&input, "i", "", "input file name")
-	flag.StringVar(&output, "o", "", "output file name")
-	flag.BoolVar(&debug, "debug", false, "debug mode")
+	compilerConfig := &config.Compiler{
+		Ctx: context.Background(),
+	}
+
+	flag.StringVar(&compilerConfig.Input, "i", "", "input file name")
+	flag.StringVar(&compilerConfig.Output, "o", "", "output file name")
+	flag.BoolVar(&compilerConfig.Debug, "debug", false, "debug mode")
 	flag.Parse()
 
-	if input == "" || output == "" {
+	if compilerConfig.Input == "" || compilerConfig.Output == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	file, err := os.OpenFile(input, os.O_RDONLY, 0666)
+	file, err := os.OpenFile(compilerConfig.Input, os.O_RDONLY, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer file.Close()
 
 	program, err := ast.Parse(token.Read(file))
@@ -36,13 +39,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = compile.Compile(program, &config.Compiler{
-		Output: output,
-		Debug:  debug,
-		Ctx:    context.Background(),
-	})
-
-	if err != nil {
+	if err = compile.Compile(program, compilerConfig); err != nil {
 		log.Fatal(err)
 	}
 }
