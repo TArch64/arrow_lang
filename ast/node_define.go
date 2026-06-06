@@ -29,7 +29,7 @@ func (d *Define) DataType() DataType {
 
 func (d *Define) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"Type":       "Define",
+		"Type":       d.Type(),
 		"Name":       d.Name,
 		"Expression": d.Expression,
 	})

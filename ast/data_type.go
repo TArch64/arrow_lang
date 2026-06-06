@@ -1,10 +1,10 @@
 package ast
 
-type DataType uint8
+type DataType string
 
 const (
-	DataInt DataType = iota
-	DataFloat
+	DataInt   DataType = "Int"
+	DataFloat DataType = "Float"
 )
 
 type DataNode interface {

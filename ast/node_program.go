@@ -25,7 +25,7 @@ func (p *Program) AddStatement(statement *Statement) {
 
 func (p *Program) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"Type":       "Program",
+		"Type":       p.Type(),
 		"Statements": p.Statements,
 	})
 }

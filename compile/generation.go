@@ -12,6 +12,7 @@ type Generation struct {
 	builder    llvm.Builder
 	targetData llvm.TargetData
 	std        *GenerationStd
+	names      *GenerationNames
 	defined    map[string]llvm.Value
 }
 
@@ -30,17 +31,18 @@ func (c *Compilation) newGeneration() *Generation {
 		defined:    make(map[string]llvm.Value),
 	}
 
-	generation.std = generateDotLLStd(generation)
+	generation.newStd()
+	generation.newNames()
 	return generation
 }
 
-func (c *Generation) astToType(astType ast.DataType) llvm.Type {
+func (g *Generation) astToType(astType ast.DataType) llvm.Type {
 	switch astType {
 	case ast.DataInt:
-		return c.std.i64T
+		return g.std.i64T
 
 	case ast.DataFloat:
-		return c.std.doubleT
+		return g.std.doubleT
 
 	default:
 		panic("unknown ast type")

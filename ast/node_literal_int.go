@@ -25,7 +25,7 @@ func (i *LiteralInt) DataType() DataType {
 
 func (i *LiteralInt) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"Type":  "LiteralInt",
+		"Type":  i.Type(),
 		"Value": i.Value,
 	})
 }

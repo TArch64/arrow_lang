@@ -49,8 +49,8 @@ func TestGenerateDotLL(t *testing.T) {
 			expected: commonLL + `
 				define i32 @main() {
 				entry:
-				  %a = call ptr @malloc(i64 8)
-				  store i64 1, ptr %a, align 8
+				  %a_1 = call ptr @malloc(i64 8)
+				  store i64 1, ptr %a_1, align 8
 				  ret i32 0
 				}
 				`,
@@ -59,21 +59,21 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "define variable with int and free",
 
-			program: ast.NewProgram(
-				ast.NewStatement(
-					ast.NewDefine("a",
-						ast.NewExpression(ast.NewLiteralInt(1)),
-					),
-				),
-				ast.NewStatement(ast.NewFree("a")),
-			),
+			program: func() *ast.Program {
+				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(1)))
+
+				return ast.NewProgram(
+					ast.NewStatement(defA),
+					ast.NewStatement(ast.NewFree(defA)),
+				)
+			}(),
 
 			expected: commonLL + `
 				define i32 @main() {
 				entry:
-				  %a = call ptr @malloc(i64 8)
-				  store i64 1, ptr %a, align 8
-				  call void @free(ptr %a)
+				  %a_1 = call ptr @malloc(i64 8)
+				  store i64 1, ptr %a_1, align 8
+				  call void @free(ptr %a_1)
 				  ret i32 0
 				}
 				`,
@@ -82,24 +82,88 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "define variable with float",
 
-			program: ast.NewProgram(
-				ast.NewStatement(
-					ast.NewDefine("a",
-						ast.NewExpression(ast.NewLiteralFloat(1.123)),
-					),
-				),
-				ast.NewStatement(ast.NewFree("a")),
-			),
+			program: func() *ast.Program {
+				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralFloat(1.123)))
+
+				return ast.NewProgram(
+					ast.NewStatement(defA),
+					ast.NewStatement(ast.NewFree(defA)),
+				)
+			}(),
 
 			expected: commonLL + `
 				define i32 @main() {
 				entry:
-				  %a = call ptr @malloc(i64 8)
-				  store double 1.123000e+00, ptr %a, align 8
-				  call void @free(ptr %a)
+				  %a_1 = call ptr @malloc(i64 8)
+				  store double 1.123000e+00, ptr %a_1, align 8
+				  call void @free(ptr %a_1)
 				  ret i32 0
 				}
 				`,
+		},
+
+		{
+			name: "define variable with assign to variable",
+
+			program: func() *ast.Program {
+				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(1)))
+
+				return ast.NewProgram(
+					ast.NewStatement(defA),
+					ast.NewStatement(
+						ast.NewDefine("b",
+							ast.NewExpression(ast.NewVariableReference(defA)),
+						),
+					),
+				)
+			}(),
+
+			expected: commonLL + `
+			define i32 @main() {
+			entry:
+			  %a_1 = call ptr @malloc(i64 8)
+			  store i64 1, ptr %a_1, align 8
+			  %b_2 = call ptr @malloc(i64 8)
+			  %a_v_3 = load i64, ptr %a_1, align 8
+			  store i64 %a_v_3, ptr %b_2, align 8
+			  ret i32 0
+			}
+			`,
+		},
+
+		{
+			name: "define variable with sum of variable and literal",
+
+			program: func() *ast.Program {
+				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(1)))
+
+				return ast.NewProgram(
+					ast.NewStatement(defA),
+					ast.NewStatement(
+						ast.NewDefine("b",
+							ast.NewExpression(
+								ast.NewExpressionSum(
+									ast.NewVariableReference(defA),
+									ast.NewLiteralInt(2),
+								),
+							),
+						),
+					),
+				)
+			}(),
+
+			expected: commonLL + `
+			define i32 @main() {
+			entry:
+			  %a_1 = call ptr @malloc(i64 8)
+			  store i64 1, ptr %a_1, align 8
+			  %b_2 = call ptr @malloc(i64 8)
+			  %a_v_3 = load i64, ptr %a_1, align 8
+			  %_4 = add i64 %a_v_3, 2
+			  store i64 %_4, ptr %b_2, align 8
+			  ret i32 0
+			}
+			`,
 		},
 	}
 
@@ -115,20 +179,20 @@ func TestGenerateDotLL(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			expected := testutil.Dedent(tc.expected)
-
-			result, err := generateDotLL(&Compilation{
+			compilation := &Compilation{
 				program:       tc.program,
 				config:        baseCompilation.config,
 				targetMachine: baseCompilation.targetMachine,
 				targetTriple:  baseCompilation.targetTriple,
 				targetData:    baseCompilation.targetData,
-			})
+			}
 
+			result, err := compilation.Generate()
 			if err != nil {
 				t.Error(err)
 			}
 
+			expected := testutil.Dedent(tc.expected)
 			if diff := cmp.Diff(expected, result.String(), multiline); diff != "" {
 				t.Error(diff)
 			}

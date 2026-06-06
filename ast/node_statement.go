@@ -21,7 +21,7 @@ func (*Statement) Type() Type {
 
 func (s *Statement) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"Type":    "Statement",
+		"Type":    s.Type(),
 		"Content": s.Content,
 	})
 }

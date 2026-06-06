@@ -120,6 +120,26 @@ func TestRead(t *testing.T) {
 				NewIdentifier("a"),
 			},
 		},
+		{
+			name: "define variable with sum of literal and variable reference",
+
+			text: `
+				def a = 1
+				def b = a + 2`,
+
+			expected: []Token{
+				NewKeywordDefine(),
+				NewIdentifier("a"),
+				NewOperatorAssign(),
+				NewLiteralInt(1),
+				NewKeywordDefine(),
+				NewIdentifier("b"),
+				NewOperatorAssign(),
+				NewIdentifier("a"),
+				NewOperatorPlus(),
+				NewLiteralInt(2),
+			},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -6,8 +6,8 @@ import (
 	"tinygo.org/x/go-llvm"
 )
 
-func generateDotLL(compilation *Compilation) (llvm.Module, error) {
-	generation := compilation.newGeneration()
+func (c *Compilation) Generate() (llvm.Module, error) {
+	generation := c.newGeneration()
 
 	mainFn := llvm.AddFunction(generation.mod, "main",
 		llvm.FunctionType(generation.std.i32T, nil, false),
@@ -16,8 +16,8 @@ func generateDotLL(compilation *Compilation) (llvm.Module, error) {
 	entryBlock := generation.ctx.AddBasicBlock(mainFn, "entry")
 	generation.builder.SetInsertPointAtEnd(entryBlock)
 
-	for _, statement := range compilation.program.Statements {
-		generateStatement(generation, statement)
+	for _, statement := range c.program.Statements {
+		generation.generateStatement(statement)
 	}
 
 	generation.builder.CreateRet(
@@ -28,54 +28,37 @@ func generateDotLL(compilation *Compilation) (llvm.Module, error) {
 	return generation.mod, err
 }
 
-func generateStatement(generation *Generation, statement *ast.Statement) {
+func (g *Generation) generateStatement(statement *ast.Statement) {
 	switch statement := statement.Content.(type) {
 	case *ast.Define:
-		generateDefine(generation, statement)
+		g.generateDefine(statement)
 	case *ast.Free:
-		generateFree(generation, statement)
+		g.generateFree(statement)
 
 	default:
 		panic("unknown statement type")
 	}
 }
 
-func generateDefine(generation *Generation, define *ast.Define) {
-	defType := generation.astToType(define.DataType())
+func (g *Generation) generateDefine(define *ast.Define) {
+	defType := g.astToType(define.DataType())
 
-	def := generation.builder.CreateCall(
-		generation.std.mallocT,
-		generation.std.malloc,
-		[]llvm.Value{generation.std.sizeOf(defType)},
-		define.Name,
+	def := g.builder.CreateCall(
+		g.std.mallocT,
+		g.std.malloc,
+		[]llvm.Value{g.std.sizeOf(defType)},
+		g.names.WithPrefix(define.Name),
 	)
 
-	value := generateDefineValue(generation, defType, define.Expression)
-	generation.builder.CreateStore(value, def)
-	generation.defined[define.Name] = def
+	g.builder.CreateStore(g.generateExpression(define.Expression), def)
+	g.defined[define.Name] = def
 }
 
-func generateDefineValue(generation *Generation, def llvm.Type, expression *ast.Expression) llvm.Value {
-	switch expression := expression.Content[0].(type) {
-	case *ast.LiteralInt:
-		return llvm.ConstInt(def, uint64(expression.Value), expression.Value < 0)
-
-	case *ast.LiteralFloat:
-		return llvm.ConstFloat(def, expression.Value)
-
-	case *ast.VariableReference:
-		return generation.defined[expression.Reference.Name]
-
-	default:
-		panic("unknown expression type")
-	}
-}
-
-func generateFree(generation *Generation, free *ast.Free) {
-	generation.builder.CreateCall(
-		generation.std.freeT,
-		generation.std.free,
-		[]llvm.Value{generation.defined[free.Reference.Name]},
+func (g *Generation) generateFree(free *ast.Free) {
+	g.builder.CreateCall(
+		g.std.freeT,
+		g.std.free,
+		[]llvm.Value{g.defined[free.Reference.Name]},
 		"",
 	)
 }

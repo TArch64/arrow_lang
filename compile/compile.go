@@ -26,7 +26,7 @@ func Compile(program *ast.Program, compilerConfig *config.Compiler) (err error) 
 
 	defer compilation.Dispose()
 
-	dotll, err := generateDotLL(compilation)
+	dotll, err := compilation.Generate()
 	if err != nil {
 		return errext.Tag("llvm dotll", err)
 	}

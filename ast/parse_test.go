@@ -139,20 +139,16 @@ func TestParse(t *testing.T) {
 				token.NewIdentifier("a"),
 			},
 
-			expectedNode: NewProgram(
-				NewStatement(
-					NewDefine("a",
-						NewExpression(NewLiteralInt(1)),
-					),
-				),
-				NewStatement(
-					NewFree(
-						NewDefine("a",
-							NewExpression(NewLiteralInt(1)),
-						),
-					),
-				),
-			),
+			expectedNode: func() Node {
+				defA := NewDefine("a",
+					NewExpression(NewLiteralInt(1)),
+				)
+
+				return NewProgram(
+					NewStatement(defA),
+					NewStatement(NewFree(defA)),
+				)
+			}(),
 		},
 		{
 			name: "define: variable with incomplete sum",
@@ -217,24 +213,54 @@ func TestParse(t *testing.T) {
 				token.NewIdentifier("a"),
 			},
 
-			expectedNode: NewProgram(
-				NewStatement(
-					NewDefine("a",
-						NewExpression(NewLiteralInt(1)),
+			expectedNode: func() Node {
+				defA := NewDefine("a",
+					NewExpression(NewLiteralInt(1)),
+				)
+
+				return NewProgram(
+					NewStatement(defA),
+					NewStatement(
+						NewDefine("b",
+							NewExpression(NewVariableReference(defA)),
+						),
 					),
-				),
-				NewStatement(
-					NewDefine("b",
-						NewExpression(
-							NewVariableReference(
-								NewDefine("a",
-									NewExpression(NewLiteralInt(1)),
+				)
+			}(),
+		},
+		{
+			name: "define: variable with sum of another variable and literal",
+
+			tokens: []token.Token{
+				token.NewKeywordDefine(),
+				token.NewIdentifier("a"),
+				token.NewOperatorAssign(),
+				token.NewLiteralInt(1),
+				token.NewKeywordDefine(),
+				token.NewIdentifier("b"),
+				token.NewOperatorAssign(),
+				token.NewIdentifier("a"),
+				token.NewOperatorPlus(),
+				token.NewLiteralInt(2),
+			},
+
+			expectedNode: func() Node {
+				defA := NewDefine("a", NewExpression(NewLiteralInt(1)))
+
+				return NewProgram(
+					NewStatement(defA),
+					NewStatement(
+						NewDefine("b",
+							NewExpression(
+								NewExpressionSum(
+									NewVariableReference(defA),
+									NewLiteralInt(2),
 								),
 							),
 						),
 					),
-				),
-			),
+				)
+			}(),
 		},
 	}
 

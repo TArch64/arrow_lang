@@ -25,7 +25,7 @@ func (f *LiteralFloat) DataType() DataType {
 
 func (f *LiteralFloat) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"Type":  "LiteralFloat",
+		"Type":  f.Type(),
 		"Value": f.Value,
 	})
 }

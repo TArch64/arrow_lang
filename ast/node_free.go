@@ -21,7 +21,7 @@ func (*Free) Type() Type {
 
 func (f *Free) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"Type":      "Free",
+		"Type":      f.Type(),
 		"Reference": f.Reference.Name,
 	})
 }

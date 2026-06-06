@@ -88,18 +88,21 @@ func parseExpression(ctx *ParsingCtx) (*Expression, error) {
 
 		switch expected := expected.(type) {
 		case *token.LiteralInt:
-			expression.PlusInt(expected.Value)
+			expression.Plus(NewLiteralInt(expected.Value))
 
 		case *token.LiteralFloat:
-			expression.PlusFloat(expected.Value)
+			expression.Plus(NewLiteralFloat(expected.Value))
 
 		case *token.Identifier:
 			define, err := ctx.ExpectDefined(expected)
 			if err != nil {
 				return nil, err
 			}
+			if define.DataType() != DataFloat && define.DataType() != DataInt {
+				return nil, fmt.Errorf("%w: %s cannot be used in math expressions", UnexpectedTokenErr, define.DataType())
+			}
 
-			expression.PlusVariableReference(define)
+			expression.Plus(NewVariableReference(define))
 
 		default:
 			panic("unreachable")

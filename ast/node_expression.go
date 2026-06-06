@@ -4,11 +4,17 @@ import (
 	"encoding/json"
 )
 
-type Expression struct {
-	Content []DataNode
+type ExpressionNode interface {
+	DataNode
+	AddExpressionItem(node DataNode)
+	OptimizeExpression() DataNode
 }
 
-func NewExpression(content ...DataNode) *Expression {
+type Expression struct {
+	Content DataNode
+}
+
+func NewExpression(content DataNode) *Expression {
 	return &Expression{Content: content}
 }
 
@@ -20,12 +26,12 @@ func (*Expression) Type() Type {
 }
 
 func (e *Expression) DataType() DataType {
-	return e.Content[0].DataType()
+	return e.Content.DataType()
 }
 
 func (e *Expression) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"Type":    "Expression",
+		"Type":    e.Type(),
 		"Content": e.Content,
 	})
 }

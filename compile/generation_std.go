@@ -21,26 +21,26 @@ type GenerationStd struct {
 	freeT llvm.Type
 }
 
-func generateDotLLStd(generation *Generation) *GenerationStd {
+func (g *Generation) newStd() {
 	std := GenerationStd{
-		targetData: generation.targetData,
+		targetData: g.targetData,
 
-		i8T:     generation.ctx.Int8Type(),
-		i32T:    generation.ctx.Int32Type(),
-		i64T:    generation.ctx.Int64Type(),
-		doubleT: generation.ctx.DoubleType(),
-		voidT:   generation.ctx.VoidType(),
+		i8T:     g.ctx.Int8Type(),
+		i32T:    g.ctx.Int32Type(),
+		i64T:    g.ctx.Int64Type(),
+		doubleT: g.ctx.DoubleType(),
+		voidT:   g.ctx.VoidType(),
 	}
 
 	std.ptrT = llvm.PointerType(std.i8T, 0)
 
 	std.mallocT = llvm.FunctionType(std.ptrT, []llvm.Type{std.i64T}, false)
-	std.malloc = llvm.AddFunction(generation.mod, "malloc", std.mallocT)
+	std.malloc = llvm.AddFunction(g.mod, "malloc", std.mallocT)
 
 	std.freeT = llvm.FunctionType(std.voidT, []llvm.Type{std.ptrT}, false)
-	std.free = llvm.AddFunction(generation.mod, "free", std.freeT)
+	std.free = llvm.AddFunction(g.mod, "free", std.freeT)
 
-	return &std
+	g.std = &std
 }
 
 func (s *GenerationStd) sizeOf(target llvm.Type) llvm.Value {

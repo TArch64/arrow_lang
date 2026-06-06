@@ -25,7 +25,7 @@ func (r *VariableReference) DataType() DataType {
 
 func (r *VariableReference) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"Type":      "VariableReference",
+		"Type":      r.Type(),
 		"Reference": r.Reference.Name,
 	})
 }
