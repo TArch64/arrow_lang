@@ -15,6 +15,7 @@ var (
 	UnexpectedTokenErr   = errext.Tag("ast", errors.New("unexpected token"))
 	UnexpectedEOFErr     = errext.Tag("ast", errors.New("unexpected EOF"))
 	UndefinedVariableErr = errext.Tag("ast", errors.New("undefined variable"))
+	UnreachableErr       = errext.Tag("ast", errext.UnreachableErr)
 )
 
 func Parse(tokens iter.Seq[token.Token]) (*Program, error) {
@@ -76,6 +77,8 @@ func parseDefine(ctx *ParsingCtx) (*Statement, error) {
 
 func parseExpression(ctx *ParsingCtx) (*Expression, error) {
 	expression := NewParsingExpression()
+	var addNode ParsingExpressionAdd = expression.Open
+
 	for {
 		expected, err := ctx.Seq.ExpectAny("should be an expression",
 			token.TypeLiteralInt,
@@ -88,10 +91,10 @@ func parseExpression(ctx *ParsingCtx) (*Expression, error) {
 
 		switch expected := expected.(type) {
 		case *token.LiteralInt:
-			expression.Plus(NewLiteralInt(expected.Value))
+			addNode(NewLiteralInt(expected.Value))
 
 		case *token.LiteralFloat:
-			expression.Plus(NewLiteralFloat(expected.Value))
+			addNode(NewLiteralFloat(expected.Value))
 
 		case *token.Identifier:
 			define, err := ctx.ExpectDefined(expected)
@@ -102,16 +105,23 @@ func parseExpression(ctx *ParsingCtx) (*Expression, error) {
 				return nil, fmt.Errorf("%w: %s cannot be used in math expressions", UnexpectedTokenErr, define.DataType())
 			}
 
-			expression.Plus(NewVariableReference(define))
+			addNode(NewVariableReference(define))
 
 		default:
-			panic("unreachable")
+			panic(errext.Tag("expression", UnreachableErr))
 		}
 
-		if ctx.Seq.HasNextAny(token.TypeOperatorPlus) {
+		switch ctx.Seq.PeekNext().(type) {
+		case *token.OperatorPlus:
 			ctx.Seq.Next()
-		} else {
-			break
+			addNode = expression.Plus
+
+		case *token.OperatorMinus:
+			ctx.Seq.Next()
+			addNode = expression.Minus
+
+		default:
+			return expression.Build(), nil
 		}
 	}
 

@@ -6,15 +6,16 @@ import (
 
 type ExpressionNode interface {
 	DataNode
-	AddExpressionItem(node DataNode)
-	OptimizeExpression() DataNode
+	OperationValue() DataNode
+	SetOperationValue(node DataNode)
+	OptimizeLiteralOperation(base DataLiteralNode) DataNode
 }
 
 type Expression struct {
-	Content DataNode
+	Content []DataNode
 }
 
-func NewExpression(content DataNode) *Expression {
+func NewExpression(content ...DataNode) *Expression {
 	return &Expression{Content: content}
 }
 
@@ -26,7 +27,12 @@ func (*Expression) Type() Type {
 }
 
 func (e *Expression) DataType() DataType {
-	return e.Content.DataType()
+	for _, node := range e.Content {
+		if node.DataType() == DataFloat {
+			return DataFloat
+		}
+	}
+	return DataInt
 }
 
 func (e *Expression) MarshalJSON() ([]byte, error) {

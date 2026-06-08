@@ -32,6 +32,9 @@ func Read(text io.Reader) iter.Seq[Token] {
 			case "+":
 				yield(NewOperatorPlus())
 
+			case "-":
+				yield(NewOperatorMinus())
+
 			default:
 				switch {
 				case FloatRegexp.MatchString(raw):

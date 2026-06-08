@@ -45,6 +45,6 @@ func (g *Generation) astToType(astType ast.DataType) llvm.Type {
 		return g.std.doubleT
 
 	default:
-		panic("unknown ast type")
+		panic(UnknownDataTypeErr)
 	}
 }

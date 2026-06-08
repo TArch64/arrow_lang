@@ -4,8 +4,9 @@ type Type uint8
 
 const (
 	TypeIdentifier Type = iota
-	TypeOperatorPlus
 	TypeOperatorAssign
+	TypeOperatorPlus
+	TypeOperatorMinus
 	TypeKeywordDefine
 	TypeKeywordFree
 	TypeLiteralInt

@@ -331,6 +331,177 @@ func TestRead(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "expressions/subtract_integers",
+			text: `def a = 5 - 2`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("a"),
+					NewOperatorAssign(),
+					NewLiteralInt(5),
+					NewOperatorMinus(),
+					NewLiteralInt(2),
+				}
+			},
+		},
+		{
+			name: "expressions/subtract_literal_and_variable",
+			text: `
+				def a = 10
+				def b = a - 3`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("a"),
+					NewOperatorAssign(),
+					NewLiteralInt(10),
+					NewKeywordDefine(),
+					NewIdentifier("b"),
+					NewOperatorAssign(),
+					NewIdentifier("a"),
+					NewOperatorMinus(),
+					NewLiteralInt(3),
+				}
+			},
+		},
+		{
+			name: "expressions/subtract_variable_and_literal",
+			text: `
+				def a = 5
+				def b = 10 - a`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("a"),
+					NewOperatorAssign(),
+					NewLiteralInt(5),
+					NewKeywordDefine(),
+					NewIdentifier("b"),
+					NewOperatorAssign(),
+					NewLiteralInt(10),
+					NewOperatorMinus(),
+					NewIdentifier("a"),
+				}
+			},
+		},
+		{
+			name: "expressions/chained_subtractions",
+			text: "def result = 10 - 3 - 2",
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("result"),
+					NewOperatorAssign(),
+					NewLiteralInt(10),
+					NewOperatorMinus(),
+					NewLiteralInt(3),
+					NewOperatorMinus(),
+					NewLiteralInt(2),
+				}
+			},
+		},
+		{
+			name: "expressions/mixed_int_float_subtraction",
+			text: "def result = 5 - 2.5",
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("result"),
+					NewOperatorAssign(),
+					NewLiteralInt(5),
+					NewOperatorMinus(),
+					NewLiteralFloat(2.5),
+				}
+			},
+		},
+		{
+			name: "expressions/float_subtraction",
+			text: "def result = 3.14 - 1.5",
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("result"),
+					NewOperatorAssign(),
+					NewLiteralFloat(3.14),
+					NewOperatorMinus(),
+					NewLiteralFloat(1.5),
+				}
+			},
+		},
+		{
+			name: "expressions/subtract_from_zero",
+			text: "def negative = 0 - 5",
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("negative"),
+					NewOperatorAssign(),
+					NewLiteralInt(0),
+					NewOperatorMinus(),
+					NewLiteralInt(5),
+				}
+			},
+		},
+		{
+			name: "expressions/mixed_addition_subtraction",
+			text: "def result = 1 + 2 - 3",
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("result"),
+					NewOperatorAssign(),
+					NewLiteralInt(1),
+					NewOperatorPlus(),
+					NewLiteralInt(2),
+					NewOperatorMinus(),
+					NewLiteralInt(3),
+				}
+			},
+		},
+		{
+			name: "expressions/mixed_subtraction_addition",
+			text: "def result = 10 - 3 + 2",
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("result"),
+					NewOperatorAssign(),
+					NewLiteralInt(10),
+					NewOperatorMinus(),
+					NewLiteralInt(3),
+					NewOperatorPlus(),
+					NewLiteralInt(2),
+				}
+			},
+		},
+		{
+			name: "expressions/complex_arithmetic_with_variables",
+			text: `
+				def x = 5
+				def y = 3
+				def z = x + y - 2`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("x"),
+					NewOperatorAssign(),
+					NewLiteralInt(5),
+					NewKeywordDefine(),
+					NewIdentifier("y"),
+					NewOperatorAssign(),
+					NewLiteralInt(3),
+					NewKeywordDefine(),
+					NewIdentifier("z"),
+					NewOperatorAssign(),
+					NewIdentifier("x"),
+					NewOperatorPlus(),
+					NewIdentifier("y"),
+					NewOperatorMinus(),
+					NewLiteralInt(2),
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {

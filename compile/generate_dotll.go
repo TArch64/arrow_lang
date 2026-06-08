@@ -1,9 +1,18 @@
 package compile
 
 import (
+	"errors"
+
 	"arrow_lang/ast"
+	"arrow_lang/errext"
 
 	"tinygo.org/x/go-llvm"
+)
+
+var (
+	UnexpectedStatementErr = errext.Tag("dotll", errors.New("unexpected statement"))
+	UnreachableErr         = errext.Tag("dotll", errors.New("unreachable"))
+	UnknownDataTypeErr     = errext.Tag("dotll", errors.New("unknown data type"))
 )
 
 func (c *Compilation) Generate() (llvm.Module, error) {
@@ -32,11 +41,12 @@ func (g *Generation) generateStatement(statement *ast.Statement) {
 	switch statement := statement.Content.(type) {
 	case *ast.Define:
 		g.generateDefine(statement)
+
 	case *ast.Free:
 		g.generateFree(statement)
 
 	default:
-		panic("unknown statement type")
+		panic(UnexpectedStatementErr)
 	}
 }
 

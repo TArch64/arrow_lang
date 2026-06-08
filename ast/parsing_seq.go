@@ -31,18 +31,18 @@ func (s *ParsingSeq) Next() (token.Token, bool) {
 	return s.next()
 }
 
-func (s *ParsingSeq) PeekNext() (token.Token, bool) {
+func (s *ParsingSeq) PeekNext() token.Token {
 	if s.buffered != nil {
-		return s.buffered, true
+		return s.buffered
 	}
 
 	buffered, ok := s.next()
 	if !ok {
-		return nil, false
+		return nil
 	}
 
 	s.buffered = buffered
-	return buffered, true
+	return buffered
 }
 
 func (s *ParsingSeq) ExpectAny(explain string, expectations ...token.Type) (token.Token, error) {
@@ -62,23 +62,6 @@ func (s *ParsingSeq) ExpectAny(explain string, expectations ...token.Type) (toke
 	}
 
 	return nil, fmt.Errorf("%w: %s, got: %s", UnexpectedTokenErr, explain, t.String())
-}
-
-func (s *ParsingSeq) HasNextAny(expectations ...token.Type) bool {
-	if len(expectations) == 0 {
-		panic("HasNextAny called with no expectations")
-	}
-
-	next, ok := s.PeekNext()
-	if !ok {
-		return false
-	}
-	for _, expectation := range expectations {
-		if next.Type() == expectation {
-			return true
-		}
-	}
-	return false
 }
 
 func ExpectToken[T token.Token](ctx *ParsingCtx, explain string) (T, error) {
