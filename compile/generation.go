@@ -1,19 +1,21 @@
 package compile
 
 import (
+	"fmt"
+
 	"arrow_lang/ast"
 
 	"tinygo.org/x/go-llvm"
 )
 
 type Generation struct {
-	ctx        llvm.Context
-	mod        llvm.Module
-	builder    llvm.Builder
-	targetData llvm.TargetData
-	std        *GenerationStd
-	names      *GenerationNames
-	defined    map[string]llvm.Value
+	ctx              llvm.Context
+	mod              llvm.Module
+	builder          llvm.Builder
+	targetData       llvm.TargetData
+	std              *GenerationStd
+	names            *GenerationNames
+	definedVariables map[string]llvm.Value
 }
 
 func (c *Compilation) newGeneration() *Generation {
@@ -24,11 +26,11 @@ func (c *Compilation) newGeneration() *Generation {
 	mod.SetTarget(c.targetTriple)
 
 	generation := &Generation{
-		ctx:        ctx,
-		mod:        mod,
-		builder:    ctx.NewBuilder(),
-		targetData: c.targetData,
-		defined:    make(map[string]llvm.Value),
+		ctx:              ctx,
+		mod:              mod,
+		builder:          ctx.NewBuilder(),
+		targetData:       c.targetData,
+		definedVariables: make(map[string]llvm.Value),
 	}
 
 	generation.newStd()
@@ -45,6 +47,6 @@ func (g *Generation) astToType(astType ast.DataType) llvm.Type {
 		return g.std.doubleT
 
 	default:
-		panic(UnknownDataTypeErr)
+		panic(fmt.Errorf("%w: got %s", UnknownDataTypeErr, astType))
 	}
 }

@@ -19,38 +19,50 @@ var (
 )
 
 func Parse(tokens iter.Seq[token.Token]) (*Program, error) {
-	program := NewProgram()
-	parsingCtx := NewParsingCtx(tokens)
-	defer parsingCtx.Seq.Stop()
+	program := NewProgram([]*Statement{})
+	ctx := NewParsingCtx(tokens)
+	defer ctx.Seq.Stop()
 
 	for {
-		t, ok := parsingCtx.Seq.Next()
-		if !ok {
+		if ctx.Seq.PeekNext() == nil {
 			break
 		}
 
-		switch t.Type() {
-		case token.TypeKeywordDefine:
-			statement, err := parseDefine(parsingCtx)
-			if err != nil {
-				return nil, err
-			}
-
-			program.AddStatement(statement)
-
-		case token.TypeKeywordFree:
-			statement, err := parseFree(parsingCtx)
-			if err != nil {
-				return nil, err
-			}
-
-			program.AddStatement(statement)
-		default:
-			return nil, fmt.Errorf("%w: %s", UnexpectedTokenErr, t.String())
+		statement, err := parseStatement(ctx)
+		if err != nil {
+			return nil, err
 		}
+
+		program.AddStatement(statement)
 	}
 
 	return program, nil
+}
+
+func parseStatement(ctx *ParsingCtx) (*Statement, error) {
+	expected, err := ctx.Seq.ExpectAny("Invalid statement",
+		token.TypeKeywordDefine,
+		token.TypeKeywordFree,
+		token.TypeKeywordReturn,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	switch expected := expected.(type) {
+	case *token.KeywordDefine:
+		return parseDefine(ctx)
+
+	case *token.KeywordFree:
+		return parseFree(ctx)
+
+	case *token.KeywordReturn:
+		return parseReturn(ctx)
+
+	default:
+		return nil, fmt.Errorf("%w: %s", UnexpectedTokenErr, expected.String())
+	}
 }
 
 func parseDefine(ctx *ParsingCtx) (*Statement, error) {
@@ -59,20 +71,61 @@ func parseDefine(ctx *ParsingCtx) (*Statement, error) {
 		return nil, err
 	}
 
-	_, err = ExpectToken[*token.OperatorAssign](ctx, "`def` should be followed by assign")
+	expected, err := ctx.Seq.ExpectAny("should be followed by assign or function curly brace",
+		token.TypeOperatorAssign,
+		token.TypeCurlyBracketOpen,
+	)
 	if err != nil {
 		return nil, err
 	}
 
+	switch expected.(type) {
+	case *token.OperatorAssign:
+		return parseVariable(ctx, nameIdentifier)
+
+	case *token.CurlyBracketOpen:
+		return parseFunction(ctx, nameIdentifier)
+
+	default:
+		panic(errext.Tag("define", UnreachableErr))
+	}
+}
+
+func parseVariable(ctx *ParsingCtx, nameIdentifier *token.Identifier) (*Statement, error) {
 	expression, err := parseExpression(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	define := NewDefine(nameIdentifier.Name, expression)
-	ctx.AddDefine(define)
+	variable := NewVariable(nameIdentifier.Name, expression)
+	ctx.Scope.AddVariable(variable)
 
-	return NewStatement(define), nil
+	return NewStatement(variable), nil
+}
+
+func parseFunction(ctx *ParsingCtx, nameIdentifier *token.Identifier) (*Statement, error) {
+	ctx.DiveScope()
+	defer ctx.AscendScope()
+
+	var statements []*Statement
+
+	for {
+		statement, err := parseStatement(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		statements = append(statements, statement)
+
+		if next := ctx.Seq.PeekNext(); next != nil && next.Type() == token.TypeCurlyBracketClose {
+			ctx.Seq.Next()
+			break
+		}
+	}
+
+	return NewStatement(
+		NewFunction(nameIdentifier.Name, statements),
+	), nil
 }
 
 func parseExpression(ctx *ParsingCtx) (*Expression, error) {
@@ -97,15 +150,15 @@ func parseExpression(ctx *ParsingCtx) (*Expression, error) {
 			addNode(NewLiteralFloat(expected.Value))
 
 		case *token.Identifier:
-			define, err := ctx.ExpectDefined(expected)
+			variable, err := ctx.Scope.ExpectVariableDefined(expected)
 			if err != nil {
 				return nil, err
 			}
-			if define.DataType() != DataFloat && define.DataType() != DataInt {
-				return nil, fmt.Errorf("%w: %s cannot be used in math expressions", UnexpectedTokenErr, define.DataType())
+			if variable.DataType() != DataFloat && variable.DataType() != DataInt {
+				return nil, fmt.Errorf("%w: %s cannot be used in math expressions", UnexpectedTokenErr, variable.DataType())
 			}
 
-			addNode(NewVariableReference(define))
+			addNode(NewVariableReference(variable))
 
 		default:
 			panic(errext.Tag("expression", UnreachableErr))
@@ -134,10 +187,19 @@ func parseFree(ctx *ParsingCtx) (*Statement, error) {
 		return nil, err
 	}
 
-	define, err := ctx.ExpectDefined(nameIdentifier)
+	variable, err := ctx.Scope.ExpectVariableDefined(nameIdentifier)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewStatement(NewFree(define)), nil
+	return NewStatement(NewFree(variable)), nil
+}
+
+func parseReturn(ctx *ParsingCtx) (*Statement, error) {
+	expression, err := parseExpression(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewStatement(NewReturn(expression)), nil
 }

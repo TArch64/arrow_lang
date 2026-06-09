@@ -8,8 +8,8 @@ type Program struct {
 	Statements []*Statement
 }
 
-func NewProgram(content ...*Statement) *Program {
-	return &Program{Statements: content}
+func NewProgram(statements []*Statement) *Program {
+	return &Program{Statements: statements}
 }
 
 var _ Node = (*Program)(nil)

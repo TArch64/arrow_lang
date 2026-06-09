@@ -9,8 +9,11 @@ const (
 	TypeOperatorMinus
 	TypeKeywordDefine
 	TypeKeywordFree
+	TypeKeywordReturn
 	TypeLiteralInt
 	TypeLiteralFloat
+	TypeCurlyBracketOpen
+	TypeCurlyBracketClose
 )
 
 type Token interface {

@@ -5,6 +5,7 @@ type DataType string
 const (
 	DataInt   DataType = "Int"
 	DataFloat DataType = "Float"
+	DataVoid  DataType = "Void"
 )
 
 type DataNode interface {

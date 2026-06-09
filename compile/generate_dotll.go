@@ -27,6 +27,7 @@ func (c *Compilation) Generate() (llvm.Module, error) {
 
 	for _, statement := range c.program.Statements {
 		generation.generateStatement(statement)
+		generation.builder.SetInsertPointAtEnd(entryBlock)
 	}
 
 	generation.builder.CreateRet(
@@ -39,36 +40,61 @@ func (c *Compilation) Generate() (llvm.Module, error) {
 
 func (g *Generation) generateStatement(statement *ast.Statement) {
 	switch statement := statement.Content.(type) {
-	case *ast.Define:
-		g.generateDefine(statement)
+	case *ast.Variable:
+		g.generateVariable(statement)
 
 	case *ast.Free:
 		g.generateFree(statement)
+
+	case *ast.Function:
+		g.generateFunction(statement)
+
+	case *ast.Return:
+		g.generateFunctionReturn(statement)
 
 	default:
 		panic(UnexpectedStatementErr)
 	}
 }
 
-func (g *Generation) generateDefine(define *ast.Define) {
-	defType := g.astToType(define.DataType())
+func (g *Generation) generateVariable(variable *ast.Variable) {
+	defType := g.astToType(variable.DataType())
 
 	def := g.builder.CreateCall(
 		g.std.mallocT,
 		g.std.malloc,
 		[]llvm.Value{g.std.sizeOf(defType)},
-		g.names.WithPrefix(define.Name),
+		g.names.WithPrefix(variable.Name),
 	)
 
-	g.builder.CreateStore(g.generateExpression(define.Expression), def)
-	g.defined[define.Name] = def
+	g.builder.CreateStore(g.generateExpression(variable.Expression), def)
+	g.definedVariables[variable.Name] = def
 }
 
 func (g *Generation) generateFree(free *ast.Free) {
 	g.builder.CreateCall(
 		g.std.freeT,
 		g.std.free,
-		[]llvm.Value{g.defined[free.Reference.Name]},
+		[]llvm.Value{g.definedVariables[free.Reference.Name]},
 		"",
 	)
+}
+
+func (g *Generation) generateFunction(function *ast.Function) {
+	funcName := g.names.WithPrefix(function.Name)
+	funcRetType := g.astToType(function.ReturnDataType())
+	funcType := llvm.FunctionType(funcRetType, []llvm.Type{}, false)
+	funcValue := llvm.AddFunction(g.mod, funcName, funcType)
+
+	entryBlock := g.ctx.AddBasicBlock(funcValue, "entry")
+	g.builder.SetInsertPointAtEnd(entryBlock)
+
+	for _, statement := range function.Statements {
+		g.generateStatement(statement)
+		g.builder.SetInsertPointAtEnd(entryBlock)
+	}
+}
+
+func (g *Generation) generateFunctionReturn(ret *ast.Return) {
+	g.builder.CreateRet(g.generateExpression(ret.Expression))
 }

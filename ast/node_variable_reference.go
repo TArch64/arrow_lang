@@ -5,10 +5,10 @@ import (
 )
 
 type VariableReference struct {
-	Reference *Define
+	Reference *Variable
 }
 
-func NewVariableReference(reference *Define) *VariableReference {
+func NewVariableReference(reference *Variable) *VariableReference {
 	return &VariableReference{Reference: reference}
 }
 

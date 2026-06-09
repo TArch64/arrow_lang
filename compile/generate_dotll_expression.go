@@ -34,7 +34,7 @@ func (g *Generation) generateExpressionValue(defs map[string]llvm.Value, node as
 
 		valueType := g.astToType(node.DataType())
 		valueName := g.names.WithPrefix(defName + "_v")
-		return g.builder.CreateLoad(valueType, g.defined[defName], valueName)
+		return g.builder.CreateLoad(valueType, g.definedVariables[defName], valueName)
 
 	default:
 		panic(errext.Tag("expression", UnreachableErr))

@@ -15,7 +15,7 @@ type Expression struct {
 	Content []DataNode
 }
 
-func NewExpression(content ...DataNode) *Expression {
+func NewExpression(content []DataNode) *Expression {
 	return &Expression{Content: content}
 }
 

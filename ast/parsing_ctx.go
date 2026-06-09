@@ -1,32 +1,32 @@
 package ast
 
 import (
-	"fmt"
 	"iter"
 
 	"arrow_lang/token"
 )
 
 type ParsingCtx struct {
-	Seq     *ParsingSeq
-	defined map[string]*Define
+	Seq       *ParsingSeq
+	Scope     *ParsingScope
+	scopePath []*ParsingScope
 }
 
 func NewParsingCtx(tokens iter.Seq[token.Token]) *ParsingCtx {
+	scope := NewParsingScope()
 	return &ParsingCtx{
-		Seq:     NewParsingSeq(tokens),
-		defined: make(map[string]*Define),
+		Seq:       NewParsingSeq(tokens),
+		Scope:     scope,
+		scopePath: []*ParsingScope{scope},
 	}
 }
 
-func (c *ParsingCtx) AddDefine(define *Define) {
-	c.defined[define.Name] = define
+func (c *ParsingCtx) DiveScope() {
+	c.Scope = c.Scope.NewChildScope()
+	c.scopePath = append(c.scopePath, c.Scope)
 }
 
-func (c *ParsingCtx) ExpectDefined(identifier *token.Identifier) (*Define, error) {
-	define, ok := c.defined[identifier.Name]
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", UndefinedVariableErr, identifier.Name)
-	}
-	return define, nil
+func (c *ParsingCtx) AscendScope() {
+	c.Scope = c.scopePath[len(c.scopePath)-1]
+	c.scopePath = c.scopePath[:len(c.scopePath)-1]
 }

@@ -502,6 +502,152 @@ func TestRead(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "functions/basic_getter",
+			text: `def fn { ret 1 }`,
+
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(1),
+					NewCurlyBracketClose(),
+				}
+			},
+		},
+		{
+			name: "functions/return_zero",
+			text: `def zero { ret 0 }`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("zero"),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(0),
+					NewCurlyBracketClose(),
+				}
+			},
+		},
+		{
+			name: "functions/return_negative_int",
+			text: `def fn { ret -1 }`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(-1),
+					NewCurlyBracketClose(),
+				}
+			},
+		},
+		{
+			name: "functions/return_float",
+			text: `def pi { ret 3.14 }`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("pi"),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralFloat(3.14),
+					NewCurlyBracketClose(),
+				}
+			},
+		},
+		{
+			name: "functions/return_sum_expression",
+			text: `def fn { ret 1 + 2 }`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(1),
+					NewOperatorPlus(),
+					NewLiteralInt(2),
+					NewCurlyBracketClose(),
+				}
+			},
+		},
+		{
+			name: "functions/return_subtraction_expression",
+			text: `def fn { ret 10 - 3 }`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(10),
+					NewOperatorMinus(),
+					NewLiteralInt(3),
+					NewCurlyBracketClose(),
+				}
+			},
+		},
+		{
+			name: "functions/return_mixed_expression",
+			text: `def fn { ret 1 + 2 - 3 }`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(1),
+					NewOperatorPlus(),
+					NewLiteralInt(2),
+					NewOperatorMinus(),
+					NewLiteralInt(3),
+					NewCurlyBracketClose(),
+				}
+			},
+		},
+		{
+			name: "functions/multiple_getters",
+			text: `
+				def one { ret 1 }
+				def two { ret 2 }`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("one"),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(1),
+					NewCurlyBracketClose(),
+					NewKeywordDefine(),
+					NewIdentifier("two"),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(2),
+					NewCurlyBracketClose(),
+				}
+			},
+		},
+		{
+			name: "functions/getter_multiline_body",
+			text: `
+				def fn {
+					ret 42
+				}`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(42),
+					NewCurlyBracketClose(),
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {

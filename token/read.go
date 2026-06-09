@@ -26,6 +26,9 @@ func Read(text io.Reader) iter.Seq[Token] {
 			case "free":
 				yield(NewKeywordFree())
 
+			case "ret":
+				yield(NewKeywordReturn())
+
 			case "=":
 				yield(NewOperatorAssign())
 
@@ -34,6 +37,12 @@ func Read(text io.Reader) iter.Seq[Token] {
 
 			case "-":
 				yield(NewOperatorMinus())
+
+			case "{":
+				yield(NewCurlyBracketOpen())
+
+			case "}":
+				yield(NewCurlyBracketClose())
 
 			default:
 				switch {

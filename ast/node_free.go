@@ -5,10 +5,10 @@ import (
 )
 
 type Free struct {
-	Reference *Define
+	Reference *Variable
 }
 
-func NewFree(reference *Define) *Free {
+func NewFree(reference *Variable) *Free {
 	return &Free{Reference: reference}
 }
 

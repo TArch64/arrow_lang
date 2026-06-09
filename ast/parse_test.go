@@ -20,14 +20,14 @@ func TestParse(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name: "error_cases/define_eof_after_keyword",
+			name: "error_cases/define_variable_eof_after_keyword",
 			tokens: func() []token.Token {
 				return []token.Token{token.NewKeywordDefine()}
 			},
 			expectedErr: UnexpectedEOFErr,
 		},
 		{
-			name: "error_cases/define_invalid_token_after_keyword",
+			name: "error_cases/define_variable_invalid_token_after_keyword",
 			tokens: func() []token.Token {
 				return []token.Token{
 					token.NewKeywordDefine(),
@@ -37,7 +37,7 @@ func TestParse(t *testing.T) {
 			expectedErr: UnexpectedTokenErr,
 		},
 		{
-			name: "error_cases/define_eof_after_identifier",
+			name: "error_cases/define_variable_eof_after_identifier",
 			tokens: func() []token.Token {
 				return []token.Token{
 					token.NewKeywordDefine(),
@@ -47,7 +47,7 @@ func TestParse(t *testing.T) {
 			expectedErr: UnexpectedEOFErr,
 		},
 		{
-			name: "error_cases/define_invalid_token_after_identifier",
+			name: "error_cases/define_variable_invalid_token_after_identifier",
 			tokens: func() []token.Token {
 				return []token.Token{
 					token.NewKeywordDefine(),
@@ -87,7 +87,7 @@ func TestParse(t *testing.T) {
 			expectedErr: UndefinedVariableErr,
 		},
 		{
-			name: "basic/define_int",
+			name: "basic/define_variable_int",
 			tokens: func() []token.Token {
 				return []token.Token{
 					token.NewKeywordDefine(),
@@ -97,17 +97,17 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("a",
-							NewExpression(NewLiteralInt(1)),
+						NewVariable("a",
+							NewExpression([]DataNode{NewLiteralInt(1)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
-			name: "basic/define_negative_int",
+			name: "basic/define_variable_negative_int",
 			tokens: func() []token.Token {
 				return []token.Token{
 					token.NewKeywordDefine(),
@@ -117,17 +117,17 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("a",
-							NewExpression(NewLiteralInt(-1)),
+						NewVariable("a",
+							NewExpression([]DataNode{NewLiteralInt(-1)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
-			name: "basic/define_float",
+			name: "basic/define_variable_float",
 			tokens: func() []token.Token {
 				return []token.Token{
 					token.NewKeywordDefine(),
@@ -137,17 +137,17 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("a",
-							NewExpression(NewLiteralFloat(1.123)),
+						NewVariable("a",
+							NewExpression([]DataNode{NewLiteralFloat(1.123)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
-			name: "basic/define_negative_float",
+			name: "basic/define_variable_negative_float",
 			tokens: func() []token.Token {
 				return []token.Token{
 					token.NewKeywordDefine(),
@@ -157,13 +157,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("a",
-							NewExpression(NewLiteralFloat(-1.123)),
+						NewVariable("a",
+							NewExpression([]DataNode{NewLiteralFloat(-1.123)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -179,13 +179,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				defA := NewDefine("a",
-					NewExpression(NewLiteralInt(1)),
+				defA := NewVariable("a",
+					NewExpression([]DataNode{NewLiteralInt(1)}),
 				)
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(defA),
 					NewStatement(NewFree(defA)),
-				)
+				})
 			},
 		},
 		{
@@ -201,13 +201,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("a",
-							NewExpression(NewLiteralInt(3)),
+						NewVariable("a",
+							NewExpression([]DataNode{NewLiteralInt(3)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -225,17 +225,17 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				defA := NewDefine("a",
-					NewExpression(NewLiteralInt(1)),
+				defA := NewVariable("a",
+					NewExpression([]DataNode{NewLiteralInt(1)}),
 				)
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(defA),
 					NewStatement(
-						NewDefine("b",
-							NewExpression(NewVariableReference(defA)),
+						NewVariable("b",
+							NewExpression([]DataNode{NewVariableReference(defA)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -255,19 +255,19 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				defA := NewDefine("a", NewExpression(NewLiteralInt(1)))
+				defA := NewVariable("a", NewExpression([]DataNode{NewLiteralInt(1)}))
 
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(defA),
 					NewStatement(
-						NewDefine("b",
-							NewExpression(
+						NewVariable("b",
+							NewExpression([]DataNode{
 								NewVariableReference(defA),
 								NewExpressionPlus(NewLiteralInt(2)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -281,13 +281,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("zero",
-							NewExpression(NewLiteralInt(0)),
+						NewVariable("zero",
+							NewExpression([]DataNode{NewLiteralInt(0)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -301,13 +301,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("big",
-							NewExpression(NewLiteralInt(999999999)),
+						NewVariable("big",
+							NewExpression([]DataNode{NewLiteralInt(999999999)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -321,13 +321,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("val",
-							NewExpression(NewLiteralFloat(5.0)),
+						NewVariable("val",
+							NewExpression([]DataNode{NewLiteralFloat(5.0)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -341,13 +341,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("small",
-							NewExpression(NewLiteralFloat(0.5)),
+						NewVariable("small",
+							NewExpression([]DataNode{NewLiteralFloat(0.5)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -363,13 +363,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralFloat(4.0)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralFloat(4.0)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -385,13 +385,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("mixed",
-							NewExpression(NewLiteralFloat(3.5)),
+						NewVariable("mixed",
+							NewExpression([]DataNode{NewLiteralFloat(3.5)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -415,24 +415,24 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				defX := NewDefine("x", NewExpression(NewLiteralInt(10)))
-				defY := NewDefine("y", NewExpression(NewLiteralInt(20)))
-				return NewProgram(
+				defX := NewVariable("x", NewExpression([]DataNode{NewLiteralInt(10)}))
+				defY := NewVariable("y", NewExpression([]DataNode{NewLiteralInt(20)}))
+				return NewProgram([]*Statement{
 					NewStatement(defX),
 					NewStatement(defY),
 					NewStatement(
-						NewDefine("sum",
-							NewExpression(
+						NewVariable("sum",
+							NewExpression([]DataNode{
 								NewVariableReference(defX),
 								NewExpressionPlus(NewVariableReference(defY)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
-			name: "complex/define_and_free_sequence",
+			name: "complex/define_variable_and_free_sequence",
 			tokens: func() []token.Token {
 				return []token.Token{
 					token.NewKeywordDefine(),
@@ -448,16 +448,16 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				defTemp := NewDefine("temp", NewExpression(NewLiteralInt(42)))
-				return NewProgram(
+				defTemp := NewVariable("temp", NewExpression([]DataNode{NewLiteralInt(42)}))
+				return NewProgram([]*Statement{
 					NewStatement(defTemp),
 					NewStatement(
-						NewDefine("copy",
-							NewExpression(NewVariableReference(defTemp)),
+						NewVariable("copy",
+							NewExpression([]DataNode{NewVariableReference(defTemp)}),
 						),
 					),
 					NewStatement(NewFree(defTemp)),
-				)
+				})
 			},
 		},
 
@@ -474,13 +474,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralInt(2)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralInt(2)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -496,13 +496,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralFloat(5.25)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralFloat(5.25)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -518,13 +518,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralFloat(5.5)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralFloat(5.5)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -540,13 +540,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralFloat(4.5)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralFloat(4.5)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -562,13 +562,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralInt(42)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralInt(42)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -584,13 +584,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralInt(0)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralInt(0)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -606,13 +606,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralInt(-5)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralInt(-5)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -628,13 +628,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralInt(-15)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralInt(-15)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -650,13 +650,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralInt(13)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralInt(13)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -676,18 +676,18 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				defX := NewDefine("x", NewExpression(NewLiteralInt(15)))
-				return NewProgram(
+				defX := NewVariable("x", NewExpression([]DataNode{NewLiteralInt(15)}))
+				return NewProgram([]*Statement{
 					NewStatement(defX),
 					NewStatement(
-						NewDefine("result",
-							NewExpression(
+						NewVariable("result",
+							NewExpression([]DataNode{
 								NewLiteralInt(20),
 								NewExpressionMinus(NewVariableReference(defX)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -707,18 +707,18 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				defX := NewDefine("x", NewExpression(NewLiteralInt(25)))
-				return NewProgram(
+				defX := NewVariable("x", NewExpression([]DataNode{NewLiteralInt(25)}))
+				return NewProgram([]*Statement{
 					NewStatement(defX),
 					NewStatement(
-						NewDefine("result",
-							NewExpression(
+						NewVariable("result",
+							NewExpression([]DataNode{
 								NewVariableReference(defX),
 								NewExpressionMinus(NewLiteralInt(12)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -742,20 +742,20 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				defX := NewDefine("x", NewExpression(NewLiteralInt(30)))
-				defY := NewDefine("y", NewExpression(NewLiteralInt(18)))
-				return NewProgram(
+				defX := NewVariable("x", NewExpression([]DataNode{NewLiteralInt(30)}))
+				defY := NewVariable("y", NewExpression([]DataNode{NewLiteralInt(18)}))
+				return NewProgram([]*Statement{
 					NewStatement(defX),
 					NewStatement(defY),
 					NewStatement(
-						NewDefine("result",
-							NewExpression(
+						NewVariable("result",
+							NewExpression([]DataNode{
 								NewVariableReference(defX),
 								NewExpressionMinus(NewVariableReference(defY)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -773,13 +773,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralInt(60)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralInt(60)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -797,13 +797,13 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralInt(12)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralInt(12)}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -833,23 +833,23 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				defA := NewDefine("a", NewExpression(NewLiteralInt(50)))
-				defB := NewDefine("b", NewExpression(NewLiteralInt(20)))
-				defC := NewDefine("c", NewExpression(NewLiteralInt(8)))
-				return NewProgram(
+				defA := NewVariable("a", NewExpression([]DataNode{NewLiteralInt(50)}))
+				defB := NewVariable("b", NewExpression([]DataNode{NewLiteralInt(20)}))
+				defC := NewVariable("c", NewExpression([]DataNode{NewLiteralInt(8)}))
+				return NewProgram([]*Statement{
 					NewStatement(defA),
 					NewStatement(defB),
 					NewStatement(defC),
 					NewStatement(
-						NewDefine("result",
-							NewExpression(
+						NewVariable("result",
+							NewExpression([]DataNode{
 								NewVariableReference(defA),
 								NewExpressionMinus(NewVariableReference(defB)),
 								NewExpressionPlus(NewVariableReference(defC)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 		},
 		{
@@ -865,13 +865,38 @@ func TestParse(t *testing.T) {
 				}
 			},
 			expectedNode: func() Node {
-				return NewProgram(
+				return NewProgram([]*Statement{
 					NewStatement(
-						NewDefine("result",
-							NewExpression(NewLiteralFloat(0.42330999999999985)),
+						NewVariable("result",
+							NewExpression([]DataNode{NewLiteralFloat(0.42330999999999985)}),
 						),
 					),
-				)
+				})
+			},
+		},
+		{
+			name: "functions/basic_getter",
+
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("fn"),
+					token.NewCurlyBracketOpen(),
+					token.NewKeywordReturn(),
+					token.NewLiteralInt(1),
+					token.NewCurlyBracketClose(),
+				}
+			},
+			expectedNode: func() Node {
+				return NewProgram([]*Statement{
+					NewStatement(
+						NewFunction("fn", []*Statement{
+							NewStatement(
+								NewReturn(NewExpression([]DataNode{NewLiteralInt(1)})),
+							),
+						}),
+					),
+				})
 			},
 		},
 	}

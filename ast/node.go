@@ -5,8 +5,10 @@ type Type string
 const (
 	TypeProgram           Type = "Program"
 	TypeStatement         Type = "Statement"
-	TypeDefine            Type = "Define"
+	TypeVariable          Type = "Variable"
+	TypeFunction          Type = "Function"
 	TypeFree              Type = "Free"
+	TypeReturn            Type = "Return"
 	TypeExpression        Type = "Expression"
 	TypeExpressionOpen    Type = "ExpressionOpen"
 	TypeExpressionPlus    Type = "ExpressionPlus"

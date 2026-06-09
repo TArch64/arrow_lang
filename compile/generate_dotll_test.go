@@ -38,13 +38,13 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "basic/define_literal_int",
 			program: func() *ast.Program {
-				return ast.NewProgram(
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(
-						ast.NewDefine("a",
-							ast.NewExpression(ast.NewLiteralInt(1)),
+						ast.NewVariable("a",
+							ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -60,13 +60,13 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "basic/define_negative_int",
 			program: func() *ast.Program {
-				return ast.NewProgram(
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(
-						ast.NewDefine("a",
-							ast.NewExpression(ast.NewLiteralInt(-42)),
+						ast.NewVariable("a",
+							ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(-42)}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -82,13 +82,13 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "basic/define_zero_int",
 			program: func() *ast.Program {
-				return ast.NewProgram(
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(
-						ast.NewDefine("zero",
-							ast.NewExpression(ast.NewLiteralInt(0)),
+						ast.NewVariable("zero",
+							ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(0)}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -104,11 +104,11 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "basic/define_float",
 			program: func() *ast.Program {
-				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralFloat(1.123)))
-				return ast.NewProgram(
+				defA := ast.NewVariable("a", ast.NewExpression([]ast.DataNode{ast.NewLiteralFloat(1.123)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defA),
 					ast.NewStatement(ast.NewFree(defA)),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -125,13 +125,13 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "basic/define_negative_float",
 			program: func() *ast.Program {
-				return ast.NewProgram(
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(
-						ast.NewDefine("neg",
-							ast.NewExpression(ast.NewLiteralFloat(-3.14)),
+						ast.NewVariable("neg",
+							ast.NewExpression([]ast.DataNode{ast.NewLiteralFloat(-3.14)}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -147,13 +147,13 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "basic/define_zero_float",
 			program: func() *ast.Program {
-				return ast.NewProgram(
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(
-						ast.NewDefine("zero",
-							ast.NewExpression(ast.NewLiteralFloat(0.0)),
+						ast.NewVariable("zero",
+							ast.NewExpression([]ast.DataNode{ast.NewLiteralFloat(0.0)}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -169,11 +169,11 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "memory/define_and_free_int",
 			program: func() *ast.Program {
-				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(1)))
-				return ast.NewProgram(
+				defA := ast.NewVariable("a", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defA),
 					ast.NewStatement(ast.NewFree(defA)),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -190,11 +190,11 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "memory/define_and_free_float",
 			program: func() *ast.Program {
-				defA := ast.NewDefine("pi", ast.NewExpression(ast.NewLiteralFloat(3.14159)))
-				return ast.NewProgram(
+				defA := ast.NewVariable("pi", ast.NewExpression([]ast.DataNode{ast.NewLiteralFloat(3.14159)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defA),
 					ast.NewStatement(ast.NewFree(defA)),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -211,15 +211,15 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "variables/assign_int_to_variable",
 			program: func() *ast.Program {
-				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(1)))
-				return ast.NewProgram(
+				defA := ast.NewVariable("a", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defA),
 					ast.NewStatement(
-						ast.NewDefine("b",
-							ast.NewExpression(ast.NewVariableReference(defA)),
+						ast.NewVariable("b",
+							ast.NewExpression([]ast.DataNode{ast.NewVariableReference(defA)}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -238,15 +238,15 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "variables/assign_float_to_variable",
 			program: func() *ast.Program {
-				defA := ast.NewDefine("original", ast.NewExpression(ast.NewLiteralFloat(2.718)))
-				return ast.NewProgram(
+				defA := ast.NewVariable("original", ast.NewExpression([]ast.DataNode{ast.NewLiteralFloat(2.718)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defA),
 					ast.NewStatement(
-						ast.NewDefine("copy",
-							ast.NewExpression(ast.NewVariableReference(defA)),
+						ast.NewVariable("copy",
+							ast.NewExpression([]ast.DataNode{ast.NewVariableReference(defA)}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -265,18 +265,18 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "expressions/sum_variable_and_literal",
 			program: func() *ast.Program {
-				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(1)))
-				return ast.NewProgram(
+				defA := ast.NewVariable("a", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defA),
 					ast.NewStatement(
-						ast.NewDefine("b",
-							ast.NewExpression(
+						ast.NewVariable("b",
+							ast.NewExpression([]ast.DataNode{
 								ast.NewVariableReference(defA),
 								ast.NewExpressionPlus(ast.NewLiteralInt(2)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -296,20 +296,20 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "expressions/sum_two_variables",
 			program: func() *ast.Program {
-				defX := ast.NewDefine("x", ast.NewExpression(ast.NewLiteralInt(5)))
-				defY := ast.NewDefine("y", ast.NewExpression(ast.NewLiteralInt(10)))
-				return ast.NewProgram(
+				defX := ast.NewVariable("x", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(5)}))
+				defY := ast.NewVariable("y", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(10)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defX),
 					ast.NewStatement(defY),
 					ast.NewStatement(
-						ast.NewDefine("sum",
-							ast.NewExpression(
+						ast.NewVariable("sum",
+							ast.NewExpression([]ast.DataNode{
 								ast.NewVariableReference(defX),
 								ast.NewExpressionPlus(ast.NewVariableReference(defY)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -332,18 +332,18 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "expressions/subtract_literal_from_variable",
 			program: func() *ast.Program {
-				defX := ast.NewDefine("x", ast.NewExpression(ast.NewLiteralInt(25)))
-				return ast.NewProgram(
+				defX := ast.NewVariable("x", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(25)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defX),
 					ast.NewStatement(
-						ast.NewDefine("result",
-							ast.NewExpression(
+						ast.NewVariable("result",
+							ast.NewExpression([]ast.DataNode{
 								ast.NewVariableReference(defX),
 								ast.NewExpressionMinus(ast.NewLiteralInt(12)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -363,18 +363,18 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "expressions/subtract_variable_from_literal",
 			program: func() *ast.Program {
-				defX := ast.NewDefine("x", ast.NewExpression(ast.NewLiteralInt(15)))
-				return ast.NewProgram(
+				defX := ast.NewVariable("x", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(15)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defX),
 					ast.NewStatement(
-						ast.NewDefine("result",
-							ast.NewExpression(
+						ast.NewVariable("result",
+							ast.NewExpression([]ast.DataNode{
 								ast.NewLiteralInt(20),
 								ast.NewExpressionMinus(ast.NewVariableReference(defX)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -394,20 +394,20 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "expressions/subtract_two_variables",
 			program: func() *ast.Program {
-				defX := ast.NewDefine("x", ast.NewExpression(ast.NewLiteralInt(30)))
-				defY := ast.NewDefine("y", ast.NewExpression(ast.NewLiteralInt(18)))
-				return ast.NewProgram(
+				defX := ast.NewVariable("x", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(30)}))
+				defY := ast.NewVariable("y", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(18)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defX),
 					ast.NewStatement(defY),
 					ast.NewStatement(
-						ast.NewDefine("result",
-							ast.NewExpression(
+						ast.NewVariable("result",
+							ast.NewExpression([]ast.DataNode{
 								ast.NewVariableReference(defX),
 								ast.NewExpressionMinus(ast.NewVariableReference(defY)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -430,23 +430,23 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "expressions/mixed_plus_minus_with_variables",
 			program: func() *ast.Program {
-				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(50)))
-				defB := ast.NewDefine("b", ast.NewExpression(ast.NewLiteralInt(20)))
-				defC := ast.NewDefine("c", ast.NewExpression(ast.NewLiteralInt(8)))
-				return ast.NewProgram(
+				defA := ast.NewVariable("a", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(50)}))
+				defB := ast.NewVariable("b", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(20)}))
+				defC := ast.NewVariable("c", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(8)}))
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defA),
 					ast.NewStatement(defB),
 					ast.NewStatement(defC),
 					ast.NewStatement(
-						ast.NewDefine("result",
-							ast.NewExpression(
+						ast.NewVariable("result",
+							ast.NewExpression([]ast.DataNode{
 								ast.NewVariableReference(defA),
 								ast.NewExpressionMinus(ast.NewVariableReference(defB)),
 								ast.NewExpressionPlus(ast.NewVariableReference(defC)),
-							),
+							}),
 						),
 					),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -473,21 +473,21 @@ func TestGenerateDotLL(t *testing.T) {
 		{
 			name: "complex/multiple_operations",
 			program: func() *ast.Program {
-				defA := ast.NewDefine("a", ast.NewExpression(ast.NewLiteralInt(100)))
-				defB := ast.NewDefine("b", ast.NewExpression(ast.NewVariableReference(defA)))
+				defA := ast.NewVariable("a", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(100)}))
+				defB := ast.NewVariable("b", ast.NewExpression([]ast.DataNode{ast.NewVariableReference(defA)}))
 
-				defC := ast.NewDefine("c", ast.NewExpression(
+				defC := ast.NewVariable("c", ast.NewExpression([]ast.DataNode{
 					ast.NewVariableReference(defB),
 					ast.NewExpressionPlus(ast.NewLiteralInt(50)),
-				))
+				}))
 
-				return ast.NewProgram(
+				return ast.NewProgram([]*ast.Statement{
 					ast.NewStatement(defA),
 					ast.NewStatement(defB),
 					ast.NewStatement(defC),
 					ast.NewStatement(ast.NewFree(defA)),
 					ast.NewStatement(ast.NewFree(defB)),
-				)
+				})
 			},
 			expected: func() string {
 				return commonLL + `
@@ -505,6 +505,37 @@ func TestGenerateDotLL(t *testing.T) {
 				  call void @free(ptr %a_1)
 				  call void @free(ptr %b_2)
 				  ret i32 0
+				}
+				`
+			},
+		},
+		{
+			name: "functions/define_basic_getter",
+
+			program: func() *ast.Program {
+				return ast.NewProgram([]*ast.Statement{
+					ast.NewStatement(
+						ast.NewFunction("fn", []*ast.Statement{
+							ast.NewStatement(
+								ast.NewReturn(
+									ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)}),
+								),
+							),
+						}),
+					),
+				})
+			},
+
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  ret i32 0
+				}
+
+				define i64 @fn_1() {
+				entry:
+				  ret i64 1
 				}
 				`
 			},

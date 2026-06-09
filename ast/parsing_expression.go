@@ -27,7 +27,7 @@ func (e *ParsingExpression) Minus(node DataNode) {
 }
 
 func (e *ParsingExpression) Build() *Expression {
-	return NewExpression(e.optimize()...)
+	return NewExpression(e.optimize())
 }
 
 func (e *ParsingExpression) optimize() []DataNode {
