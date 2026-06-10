@@ -1,5 +1,6 @@
 def fn() {
-  ret 696969
+  def a = 69
+  ret 696969 + a
 }
 
 def tttt = fn() + 1

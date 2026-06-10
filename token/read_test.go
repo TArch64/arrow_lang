@@ -649,6 +649,26 @@ func TestRead(t *testing.T) {
 			},
 		},
 		{
+			name: "functions/getter_with_local_variable",
+			text: `def fn() { def x = 1 ret x }`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewCurlyBracketOpen(),
+					NewKeywordDefine(),
+					NewIdentifier("x"),
+					NewOperatorAssign(),
+					NewLiteralInt(1),
+					NewKeywordReturn(),
+					NewIdentifier("x"),
+					NewCurlyBracketClose(),
+				}
+			},
+		},
+		{
 			name: "functions/basic_getter_call",
 			text: `
 				def fn() { ret 1 }

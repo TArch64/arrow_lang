@@ -1035,6 +1035,42 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			name: "functions/getter_with_local_variable",
+
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewCurlyBracketOpen(),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("x"),
+					token.NewOperatorAssign(),
+					token.NewLiteralInt(1),
+					token.NewKeywordReturn(),
+					token.NewIdentifier("x"),
+					token.NewCurlyBracketClose(),
+				}
+			},
+			expectedNode: func() Node {
+				defX := NewVariable("x", NewExpression([]DataNode{NewLiteralInt(1)}))
+
+				return NewProgram([]*Statement{
+					NewStatement(
+						NewFunction("fn", []*Statement{
+							NewStatement(defX),
+							NewStatement(
+								NewFunctionReturn(
+									NewExpression([]DataNode{NewVariableReference(defX)}),
+								),
+							),
+						}),
+					),
+				})
+			},
+		},
+		{
 			name: "functions/call_basic_getter",
 
 			tokens: func() []token.Token {

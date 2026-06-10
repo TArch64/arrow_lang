@@ -541,6 +541,43 @@ func TestGenerateDotLL(t *testing.T) {
 			},
 		},
 		{
+			name: "functions/getter_with_local_variable",
+
+			program: func() *ast.Program {
+				defX := ast.NewVariable("x", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)}))
+
+				return ast.NewProgram([]*ast.Statement{
+					ast.NewStatement(
+						ast.NewFunction("fn", []*ast.Statement{
+							ast.NewStatement(defX),
+							ast.NewStatement(
+								ast.NewFunctionReturn(
+									ast.NewExpression([]ast.DataNode{ast.NewVariableReference(defX)}),
+								),
+							),
+						}),
+					),
+				})
+			},
+
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  ret i32 0
+				}
+
+				define i64 @fn_1() {
+				entry:
+				  %x_2 = call ptr @malloc(i64 8)
+				  store i64 1, ptr %x_2, align 8
+				  %x_v_3 = load i64, ptr %x_2, align 8
+				  ret i64 %x_v_3
+				}
+				`
+			},
+		},
+		{
 			name: "functions/call_basic_getter",
 
 			program: func() *ast.Program {
