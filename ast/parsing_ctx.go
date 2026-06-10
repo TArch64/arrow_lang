@@ -13,7 +13,8 @@ type ParsingCtx struct {
 }
 
 func NewParsingCtx(tokens iter.Seq[token.Token]) *ParsingCtx {
-	scope := NewParsingScope()
+	scope := NewParsingScope(nil)
+
 	return &ParsingCtx{
 		Seq:       NewParsingSeq(tokens),
 		Scope:     scope,
@@ -27,6 +28,6 @@ func (c *ParsingCtx) DiveScope() {
 }
 
 func (c *ParsingCtx) AscendScope() {
-	c.Scope = c.scopePath[len(c.scopePath)-1]
 	c.scopePath = c.scopePath[:len(c.scopePath)-1]
+	c.Scope = c.scopePath[len(c.scopePath)-1]
 }

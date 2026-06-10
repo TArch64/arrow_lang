@@ -15,6 +15,7 @@ var (
 	UnexpectedTokenErr   = errext.Tag("ast", errors.New("unexpected token"))
 	UnexpectedEOFErr     = errext.Tag("ast", errors.New("unexpected EOF"))
 	UndefinedVariableErr = errext.Tag("ast", errors.New("undefined variable"))
+	UndefinedFunctionErr = errext.Tag("ast", errors.New("undefined function"))
 	UnreachableErr       = errext.Tag("ast", errext.UnreachableErr)
 )
 
@@ -58,7 +59,7 @@ func parseStatement(ctx *ParsingCtx) (*Statement, error) {
 		return parseFree(ctx)
 
 	case *token.KeywordReturn:
-		return parseReturn(ctx)
+		return parseFunctionReturn(ctx)
 
 	default:
 		return nil, fmt.Errorf("%w: %s", UnexpectedTokenErr, expected.String())
@@ -71,9 +72,9 @@ func parseDefine(ctx *ParsingCtx) (*Statement, error) {
 		return nil, err
 	}
 
-	expected, err := ctx.Seq.ExpectAny("should be followed by assign or function curly brace",
+	expected, err := ctx.Seq.ExpectAny("should be followed by assign or function definition",
 		token.TypeOperatorAssign,
-		token.TypeCurlyBracketOpen,
+		token.TypeParenthesesOpen,
 	)
 	if err != nil {
 		return nil, err
@@ -83,7 +84,7 @@ func parseDefine(ctx *ParsingCtx) (*Statement, error) {
 	case *token.OperatorAssign:
 		return parseVariable(ctx, nameIdentifier)
 
-	case *token.CurlyBracketOpen:
+	case *token.ParenthesesOpen:
 		return parseFunction(ctx, nameIdentifier)
 
 	default:
@@ -104,10 +105,11 @@ func parseVariable(ctx *ParsingCtx, nameIdentifier *token.Identifier) (*Statemen
 }
 
 func parseFunction(ctx *ParsingCtx, nameIdentifier *token.Identifier) (*Statement, error) {
-	ctx.DiveScope()
-	defer ctx.AscendScope()
+	ctx.Seq.Next() // skip parentheses
+	ctx.Seq.Next() // skip curly bracket open
 
 	var statements []*Statement
+	ctx.DiveScope()
 
 	for {
 		statement, err := parseStatement(ctx)
@@ -123,9 +125,12 @@ func parseFunction(ctx *ParsingCtx, nameIdentifier *token.Identifier) (*Statemen
 		}
 	}
 
-	return NewStatement(
-		NewFunction(nameIdentifier.Name, statements),
-	), nil
+	ctx.AscendScope()
+
+	function := NewFunction(nameIdentifier.Name, statements)
+	ctx.Scope.AddFunction(function)
+
+	return NewStatement(function), nil
 }
 
 func parseExpression(ctx *ParsingCtx) (*Expression, error) {
@@ -150,15 +155,36 @@ func parseExpression(ctx *ParsingCtx) (*Expression, error) {
 			addNode(NewLiteralFloat(expected.Value))
 
 		case *token.Identifier:
-			variable, err := ctx.Scope.ExpectVariableDefined(expected)
-			if err != nil {
-				return nil, err
-			}
-			if variable.DataType() != DataFloat && variable.DataType() != DataInt {
-				return nil, fmt.Errorf("%w: %s cannot be used in math expressions", UnexpectedTokenErr, variable.DataType())
-			}
+			if next := ctx.Seq.PeekNext(); next != nil && next.Type() == token.TypeParenthesesOpen {
+				function, err := ctx.Scope.ExpectFunctionDefined(expected)
+				if err != nil {
+					return nil, err
+				}
 
-			addNode(NewVariableReference(variable))
+				dataType := function.ReturnDataType()
+				if dataType != DataFloat && dataType != DataInt {
+					return nil, fmt.Errorf("%w: %s cannot be used in math expressions", UnexpectedTokenErr, dataType)
+				}
+
+				call, err := parseFunctionCall(ctx, function)
+				if err != nil {
+					return nil, err
+				}
+
+				addNode(call)
+			} else {
+				variable, err := ctx.Scope.ExpectVariableDefined(expected)
+				if err != nil {
+					return nil, err
+				}
+
+				dataType := variable.DataType()
+				if dataType != DataFloat && dataType != DataInt {
+					return nil, fmt.Errorf("%w: %s cannot be used in math expressions", UnexpectedTokenErr, dataType)
+				}
+
+				addNode(NewVariableReference(variable))
+			}
 
 		default:
 			panic(errext.Tag("expression", UnreachableErr))
@@ -195,11 +221,17 @@ func parseFree(ctx *ParsingCtx) (*Statement, error) {
 	return NewStatement(NewFree(variable)), nil
 }
 
-func parseReturn(ctx *ParsingCtx) (*Statement, error) {
+func parseFunctionReturn(ctx *ParsingCtx) (*Statement, error) {
 	expression, err := parseExpression(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewStatement(NewReturn(expression)), nil
+	return NewStatement(NewFunctionReturn(expression)), nil
+}
+
+func parseFunctionCall(ctx *ParsingCtx, function *Function) (*FunctionCall, error) {
+	ctx.Seq.Next() // skip parentheses open
+	ctx.Seq.Next() // skip parentheses close
+	return NewFunctionCall(function), nil
 }

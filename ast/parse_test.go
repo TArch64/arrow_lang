@@ -87,6 +87,139 @@ func TestParse(t *testing.T) {
 			expectedErr: UndefinedVariableErr,
 		},
 		{
+			name: "error_cases/statement_invalid_first_token",
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewLiteralInt(1),
+				}
+			},
+			expectedErr: UnexpectedTokenErr,
+		},
+		{
+			name: "error_cases/expression_eof_after_assign",
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+				}
+			},
+			expectedErr: UnexpectedEOFErr,
+		},
+		{
+			name: "error_cases/expression_invalid_token_after_assign",
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewKeywordDefine(),
+				}
+			},
+			expectedErr: UnexpectedTokenErr,
+		},
+		{
+			name: "error_cases/expression_eof_after_operator",
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewLiteralInt(1),
+					token.NewOperatorPlus(),
+				}
+			},
+			expectedErr: UnexpectedEOFErr,
+		},
+		{
+			name: "error_cases/free_eof_after_keyword",
+			tokens: func() []token.Token {
+				return []token.Token{token.NewKeywordFree()}
+			},
+			expectedErr: UnexpectedEOFErr,
+		},
+		{
+			name: "error_cases/free_invalid_token_after_keyword",
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordFree(),
+					token.NewLiteralInt(1),
+				}
+			},
+			expectedErr: UnexpectedTokenErr,
+		},
+		{
+			name: "error_cases/free_undefined_variable",
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordFree(),
+					token.NewIdentifier("missing"),
+				}
+			},
+			expectedErr: UndefinedVariableErr,
+		},
+		{
+			name: "error_cases/return_eof_after_keyword",
+			tokens: func() []token.Token {
+				return []token.Token{token.NewKeywordReturn()}
+			},
+			expectedErr: UnexpectedEOFErr,
+		},
+		{
+			name: "error_cases/call_undefined_function",
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+				}
+			},
+			expectedErr: UndefinedFunctionErr,
+		},
+		{
+			name: "error_cases/function_empty_body",
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewCurlyBracketOpen(),
+					token.NewCurlyBracketClose(),
+				}
+			},
+			expectedErr: UnexpectedTokenErr,
+		},
+		{
+			name: "error_cases/call_void_function_in_expression",
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewCurlyBracketOpen(),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("x"),
+					token.NewOperatorAssign(),
+					token.NewLiteralInt(1),
+					token.NewCurlyBracketClose(),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+				}
+			},
+			expectedErr: UnexpectedTokenErr,
+		},
+		{
 			name: "basic/define_variable_int",
 			tokens: func() []token.Token {
 				return []token.Token{
@@ -881,6 +1014,8 @@ func TestParse(t *testing.T) {
 				return []token.Token{
 					token.NewKeywordDefine(),
 					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
 					token.NewCurlyBracketOpen(),
 					token.NewKeywordReturn(),
 					token.NewLiteralInt(1),
@@ -892,9 +1027,291 @@ func TestParse(t *testing.T) {
 					NewStatement(
 						NewFunction("fn", []*Statement{
 							NewStatement(
-								NewReturn(NewExpression([]DataNode{NewLiteralInt(1)})),
+								NewFunctionReturn(NewExpression([]DataNode{NewLiteralInt(1)})),
 							),
 						}),
+					),
+				})
+			},
+		},
+		{
+			name: "functions/call_basic_getter",
+
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewCurlyBracketOpen(),
+					token.NewKeywordReturn(),
+					token.NewLiteralInt(1),
+					token.NewCurlyBracketClose(),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+				}
+			},
+			expectedNode: func() Node {
+				function := NewFunction("fn", []*Statement{
+					NewStatement(
+						NewFunctionReturn(NewExpression([]DataNode{NewLiteralInt(1)})),
+					),
+				})
+
+				return NewProgram([]*Statement{
+					NewStatement(function),
+					NewStatement(
+						NewVariable("a",
+							NewExpression([]DataNode{
+								NewFunctionCall(function),
+							}),
+						),
+					),
+				})
+			},
+		},
+		{
+			name: "function_calls/call_plus_literal",
+
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewCurlyBracketOpen(),
+					token.NewKeywordReturn(),
+					token.NewLiteralInt(1),
+					token.NewCurlyBracketClose(),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewOperatorPlus(),
+					token.NewLiteralInt(2),
+				}
+			},
+			expectedNode: func() Node {
+				function := NewFunction("fn", []*Statement{
+					NewStatement(
+						NewFunctionReturn(NewExpression([]DataNode{NewLiteralInt(1)})),
+					),
+				})
+
+				return NewProgram([]*Statement{
+					NewStatement(function),
+					NewStatement(
+						NewVariable("a",
+							NewExpression([]DataNode{
+								NewFunctionCall(function),
+								NewExpressionPlus(NewLiteralInt(2)),
+							}),
+						),
+					),
+				})
+			},
+		},
+		{
+			name: "function_calls/literal_plus_call",
+
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewCurlyBracketOpen(),
+					token.NewKeywordReturn(),
+					token.NewLiteralInt(1),
+					token.NewCurlyBracketClose(),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewLiteralInt(2),
+					token.NewOperatorPlus(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+				}
+			},
+			expectedNode: func() Node {
+				function := NewFunction("fn", []*Statement{
+					NewStatement(
+						NewFunctionReturn(NewExpression([]DataNode{NewLiteralInt(1)})),
+					),
+				})
+
+				return NewProgram([]*Statement{
+					NewStatement(function),
+					NewStatement(
+						NewVariable("a",
+							NewExpression([]DataNode{
+								NewLiteralInt(2),
+								NewExpressionPlus(NewFunctionCall(function)),
+							}),
+						),
+					),
+				})
+			},
+		},
+		{
+			name: "function_calls/call_minus_call",
+
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("one"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewCurlyBracketOpen(),
+					token.NewKeywordReturn(),
+					token.NewLiteralInt(1),
+					token.NewCurlyBracketClose(),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("two"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewCurlyBracketOpen(),
+					token.NewKeywordReturn(),
+					token.NewLiteralInt(2),
+					token.NewCurlyBracketClose(),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewIdentifier("two"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewOperatorMinus(),
+					token.NewIdentifier("one"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+				}
+			},
+			expectedNode: func() Node {
+				one := NewFunction("one", []*Statement{
+					NewStatement(
+						NewFunctionReturn(NewExpression([]DataNode{NewLiteralInt(1)})),
+					),
+				})
+				two := NewFunction("two", []*Statement{
+					NewStatement(
+						NewFunctionReturn(NewExpression([]DataNode{NewLiteralInt(2)})),
+					),
+				})
+
+				return NewProgram([]*Statement{
+					NewStatement(one),
+					NewStatement(two),
+					NewStatement(
+						NewVariable("a",
+							NewExpression([]DataNode{
+								NewFunctionCall(two),
+								NewExpressionMinus(NewFunctionCall(one)),
+							}),
+						),
+					),
+				})
+			},
+		},
+		{
+			name: "function_calls/call_plus_variable",
+
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewCurlyBracketOpen(),
+					token.NewKeywordReturn(),
+					token.NewLiteralInt(1),
+					token.NewCurlyBracketClose(),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("b"),
+					token.NewOperatorAssign(),
+					token.NewLiteralInt(5),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewOperatorPlus(),
+					token.NewIdentifier("b"),
+				}
+			},
+			expectedNode: func() Node {
+				function := NewFunction("fn", []*Statement{
+					NewStatement(
+						NewFunctionReturn(NewExpression([]DataNode{NewLiteralInt(1)})),
+					),
+				})
+				defB := NewVariable("b", NewExpression([]DataNode{NewLiteralInt(5)}))
+
+				return NewProgram([]*Statement{
+					NewStatement(function),
+					NewStatement(defB),
+					NewStatement(
+						NewVariable("a",
+							NewExpression([]DataNode{
+								NewFunctionCall(function),
+								NewExpressionPlus(NewVariableReference(defB)),
+							}),
+						),
+					),
+				})
+			},
+		},
+		{
+			name: "function_calls/chained_call_expression",
+
+			tokens: func() []token.Token {
+				return []token.Token{
+					token.NewKeywordDefine(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewCurlyBracketOpen(),
+					token.NewKeywordReturn(),
+					token.NewLiteralInt(1),
+					token.NewCurlyBracketClose(),
+					token.NewKeywordDefine(),
+					token.NewIdentifier("a"),
+					token.NewOperatorAssign(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewOperatorPlus(),
+					token.NewIdentifier("fn"),
+					token.NewParenthesesOpen(),
+					token.NewParenthesesClose(),
+					token.NewOperatorMinus(),
+					token.NewLiteralInt(2),
+				}
+			},
+			expectedNode: func() Node {
+				function := NewFunction("fn", []*Statement{
+					NewStatement(
+						NewFunctionReturn(NewExpression([]DataNode{NewLiteralInt(1)})),
+					),
+				})
+
+				return NewProgram([]*Statement{
+					NewStatement(function),
+					NewStatement(
+						NewVariable("a",
+							NewExpression([]DataNode{
+								NewFunctionCall(function),
+								NewExpressionPlus(NewFunctionCall(function)),
+								NewExpressionMinus(NewLiteralInt(2)),
+							}),
+						),
 					),
 				})
 			},

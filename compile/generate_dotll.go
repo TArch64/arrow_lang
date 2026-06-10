@@ -49,7 +49,7 @@ func (g *Generation) generateStatement(statement *ast.Statement) {
 	case *ast.Function:
 		g.generateFunction(statement)
 
-	case *ast.Return:
+	case *ast.FunctionReturn:
 		g.generateFunctionReturn(statement)
 
 	default:
@@ -93,8 +93,13 @@ func (g *Generation) generateFunction(function *ast.Function) {
 		g.generateStatement(statement)
 		g.builder.SetInsertPointAtEnd(entryBlock)
 	}
+
+	g.definedFunctions[function.Name] = &DefinedFunction{
+		Type:  funcType,
+		Value: funcValue,
+	}
 }
 
-func (g *Generation) generateFunctionReturn(ret *ast.Return) {
+func (g *Generation) generateFunctionReturn(ret *ast.FunctionReturn) {
 	g.builder.CreateRet(g.generateExpression(ret.Expression))
 }

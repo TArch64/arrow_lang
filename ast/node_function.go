@@ -29,7 +29,7 @@ func (f *Function) ReturnDataType() DataType {
 	}
 
 	last := f.Statements[len(f.Statements)-1]
-	if ret, ok := last.Content.(*Return); ok {
+	if ret, ok := last.Content.(*FunctionReturn); ok {
 		return ret.DataType()
 	}
 

@@ -8,6 +8,11 @@ import (
 	"tinygo.org/x/go-llvm"
 )
 
+type DefinedFunction struct {
+	Type  llvm.Type
+	Value llvm.Value
+}
+
 type Generation struct {
 	ctx              llvm.Context
 	mod              llvm.Module
@@ -16,6 +21,7 @@ type Generation struct {
 	std              *GenerationStd
 	names            *GenerationNames
 	definedVariables map[string]llvm.Value
+	definedFunctions map[string]*DefinedFunction
 }
 
 func (c *Compilation) newGeneration() *Generation {
@@ -31,6 +37,7 @@ func (c *Compilation) newGeneration() *Generation {
 		builder:          ctx.NewBuilder(),
 		targetData:       c.targetData,
 		definedVariables: make(map[string]llvm.Value),
+		definedFunctions: make(map[string]*DefinedFunction),
 	}
 
 	generation.newStd()

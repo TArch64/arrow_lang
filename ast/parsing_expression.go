@@ -45,7 +45,7 @@ func (e *ParsingExpression) optimize() []DataNode {
 			continue
 		}
 
-		if _, ok := operation.OperationValue().(*VariableReference); ok {
+		if _, ok := operation.OperationValue().(DataLiteralNode); !ok {
 			result = append(result, operation)
 			last = operation
 			continue

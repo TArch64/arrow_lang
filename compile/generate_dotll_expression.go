@@ -8,17 +8,16 @@ import (
 )
 
 func (g *Generation) generateExpression(expression *ast.Expression) llvm.Value {
-	defs := map[string]llvm.Value{}
-	acc := g.generateExpressionValue(defs, expression.Content[0])
+	acc := g.generateExpressionValue(expression.Content[0])
 
 	for _, node := range expression.Content[1:] {
-		acc = g.generateExpressionOperation(acc, defs, node)
+		acc = g.generateExpressionOperation(acc, node)
 	}
 
 	return acc
 }
 
-func (g *Generation) generateExpressionValue(defs map[string]llvm.Value, node ast.DataNode) llvm.Value {
+func (g *Generation) generateExpressionValue(node ast.DataNode) llvm.Value {
 	switch node := node.(type) {
 	case *ast.LiteralInt:
 		return llvm.ConstInt(g.std.i64T, uint64(node.Value), node.Value < 0)
@@ -28,27 +27,27 @@ func (g *Generation) generateExpressionValue(defs map[string]llvm.Value, node as
 
 	case *ast.VariableReference:
 		defName := node.Reference.Name
-		if cached, ok := defs[defName]; ok {
-			return cached
-		}
-
 		valueType := g.astToType(node.DataType())
 		valueName := g.names.WithPrefix(defName + "_v")
 		return g.builder.CreateLoad(valueType, g.definedVariables[defName], valueName)
+
+	case *ast.FunctionCall:
+		def := g.definedFunctions[node.Function.Name]
+		return g.builder.CreateCall(def.Type, def.Value, []llvm.Value{}, g.names.Random())
 
 	default:
 		panic(errext.Tag("expression", UnreachableErr))
 	}
 }
 
-func (g *Generation) generateExpressionOperation(acc llvm.Value, defs map[string]llvm.Value, node ast.DataNode) llvm.Value {
+func (g *Generation) generateExpressionOperation(acc llvm.Value, node ast.DataNode) llvm.Value {
 	switch node := node.(type) {
 	case *ast.ExpressionPlus:
-		value := g.generateExpressionValue(defs, node.Value)
+		value := g.generateExpressionValue(node.Value)
 		return g.builder.CreateAdd(acc, value, g.names.Random())
 
 	case *ast.ExpressionMinus:
-		value := g.generateExpressionValue(defs, node.Value)
+		value := g.generateExpressionValue(node.Value)
 		return g.builder.CreateSub(acc, value, g.names.Random())
 
 	default:

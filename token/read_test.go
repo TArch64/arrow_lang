@@ -648,6 +648,181 @@ func TestRead(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "functions/basic_getter_call",
+			text: `
+				def fn() { ret 1 }
+				def a = fn()`,
+
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(1),
+					NewCurlyBracketClose(),
+					NewKeywordDefine(),
+					NewIdentifier("a"),
+					NewOperatorAssign(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+				}
+			},
+		},
+		{
+			name: "function_calls/call_plus_literal",
+			text: `
+				def fn() { ret 1 }
+				def a = fn() + 2`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(1),
+					NewCurlyBracketClose(),
+					NewKeywordDefine(),
+					NewIdentifier("a"),
+					NewOperatorAssign(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewOperatorPlus(),
+					NewLiteralInt(2),
+				}
+			},
+		},
+		{
+			name: "function_calls/literal_plus_call",
+			text: `
+				def fn() { ret 1 }
+				def a = 2 + fn()`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(1),
+					NewCurlyBracketClose(),
+					NewKeywordDefine(),
+					NewIdentifier("a"),
+					NewOperatorAssign(),
+					NewLiteralInt(2),
+					NewOperatorPlus(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+				}
+			},
+		},
+		{
+			name: "function_calls/call_minus_call",
+			text: `
+				def one() { ret 1 }
+				def two() { ret 2 }
+				def a = two() - one()`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("one"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(1),
+					NewCurlyBracketClose(),
+					NewKeywordDefine(),
+					NewIdentifier("two"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(2),
+					NewCurlyBracketClose(),
+					NewKeywordDefine(),
+					NewIdentifier("a"),
+					NewOperatorAssign(),
+					NewIdentifier("two"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewOperatorMinus(),
+					NewIdentifier("one"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+				}
+			},
+		},
+		{
+			name: "function_calls/call_plus_variable",
+			text: `
+				def fn() { ret 1 }
+				def b = 5
+				def a = fn() + b`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(1),
+					NewCurlyBracketClose(),
+					NewKeywordDefine(),
+					NewIdentifier("b"),
+					NewOperatorAssign(),
+					NewLiteralInt(5),
+					NewKeywordDefine(),
+					NewIdentifier("a"),
+					NewOperatorAssign(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewOperatorPlus(),
+					NewIdentifier("b"),
+				}
+			},
+		},
+		{
+			name: "function_calls/chained_call_expression",
+			text: `
+				def fn() { ret 1 }
+				def a = fn() + fn() - 2`,
+			expected: func() []Token {
+				return []Token{
+					NewKeywordDefine(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewCurlyBracketOpen(),
+					NewKeywordReturn(),
+					NewLiteralInt(1),
+					NewCurlyBracketClose(),
+					NewKeywordDefine(),
+					NewIdentifier("a"),
+					NewOperatorAssign(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewOperatorPlus(),
+					NewIdentifier("fn"),
+					NewParenthesesOpen(),
+					NewParenthesesClose(),
+					NewOperatorMinus(),
+					NewLiteralInt(2),
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {

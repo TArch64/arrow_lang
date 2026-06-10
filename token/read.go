@@ -16,7 +16,7 @@ var (
 func Read(text io.Reader) iter.Seq[Token] {
 	return func(yield func(Token) bool) {
 		scanner := bufio.NewScanner(text)
-		scanner.Split(bufio.ScanWords)
+		scanner.Split(readSplitter)
 
 		for scanner.Scan() {
 			switch raw := scanner.Text(); raw {
@@ -43,6 +43,12 @@ func Read(text io.Reader) iter.Seq[Token] {
 
 			case "}":
 				yield(NewCurlyBracketClose())
+
+			case "(":
+				yield(NewParenthesesOpen())
+
+			case ")":
+				yield(NewParenthesesClose())
 
 			default:
 				switch {

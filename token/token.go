@@ -14,6 +14,8 @@ const (
 	TypeLiteralFloat
 	TypeCurlyBracketOpen
 	TypeCurlyBracketClose
+	TypeParenthesesOpen
+	TypeParenthesesClose
 )
 
 type Token interface {

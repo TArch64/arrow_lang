@@ -13,8 +13,8 @@ path_quoted := quote(PATH)
 cgo_cppflags_quoted := quote(trim(replace(CGO_CPPFLAGS, "\n", " ")))
 cgo_ldflags_quoted := quote(trim(replace(CGO_LDFLAGS, "\n", " ")))
 
-compile_test input output: 
-    go run -tags={{go_tags}} . -i {{input}} -o {{output}} --debug
+compile_test name:
+    go run -tags={{go_tags}} . -i dist/test/{{name}}.arr -o dist/{{name}} --debug
 
 export_envs:
     @rm -f build.env

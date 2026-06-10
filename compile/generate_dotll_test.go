@@ -517,7 +517,7 @@ func TestGenerateDotLL(t *testing.T) {
 					ast.NewStatement(
 						ast.NewFunction("fn", []*ast.Statement{
 							ast.NewStatement(
-								ast.NewReturn(
+								ast.NewFunctionReturn(
 									ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)}),
 								),
 							),
@@ -530,6 +530,270 @@ func TestGenerateDotLL(t *testing.T) {
 				return commonLL + `
 				define i32 @main() {
 				entry:
+				  ret i32 0
+				}
+
+				define i64 @fn_1() {
+				entry:
+				  ret i64 1
+				}
+				`
+			},
+		},
+		{
+			name: "functions/call_basic_getter",
+
+			program: func() *ast.Program {
+				function := ast.NewFunction("fn", []*ast.Statement{
+					ast.NewStatement(
+						ast.NewFunctionReturn(ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)})),
+					),
+				})
+
+				return ast.NewProgram([]*ast.Statement{
+					ast.NewStatement(function),
+					ast.NewStatement(
+						ast.NewVariable("a",
+							ast.NewExpression([]ast.DataNode{
+								ast.NewFunctionCall(function),
+							}),
+						),
+					),
+				})
+			},
+
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %a_2 = call ptr @malloc(i64 8)
+				  %_3 = call i64 @fn_1()
+				  store i64 %_3, ptr %a_2, align 8
+				  ret i32 0
+				}
+
+				define i64 @fn_1() {
+				entry:
+				  ret i64 1
+				}
+				`
+			},
+		},
+		{
+			name: "function_calls/call_plus_literal",
+
+			program: func() *ast.Program {
+				function := ast.NewFunction("fn", []*ast.Statement{
+					ast.NewStatement(
+						ast.NewFunctionReturn(ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)})),
+					),
+				})
+
+				return ast.NewProgram([]*ast.Statement{
+					ast.NewStatement(function),
+					ast.NewStatement(
+						ast.NewVariable("a",
+							ast.NewExpression([]ast.DataNode{
+								ast.NewFunctionCall(function),
+								ast.NewExpressionPlus(ast.NewLiteralInt(2)),
+							}),
+						),
+					),
+				})
+			},
+
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %a_2 = call ptr @malloc(i64 8)
+				  %_3 = call i64 @fn_1()
+				  %_4 = add i64 %_3, 2
+				  store i64 %_4, ptr %a_2, align 8
+				  ret i32 0
+				}
+
+				define i64 @fn_1() {
+				entry:
+				  ret i64 1
+				}
+				`
+			},
+		},
+		{
+			name: "function_calls/literal_plus_call",
+
+			program: func() *ast.Program {
+				function := ast.NewFunction("fn", []*ast.Statement{
+					ast.NewStatement(
+						ast.NewFunctionReturn(ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)})),
+					),
+				})
+
+				return ast.NewProgram([]*ast.Statement{
+					ast.NewStatement(function),
+					ast.NewStatement(
+						ast.NewVariable("a",
+							ast.NewExpression([]ast.DataNode{
+								ast.NewLiteralInt(2),
+								ast.NewExpressionPlus(ast.NewFunctionCall(function)),
+							}),
+						),
+					),
+				})
+			},
+
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %a_2 = call ptr @malloc(i64 8)
+				  %_3 = call i64 @fn_1()
+				  %_4 = add i64 2, %_3
+				  store i64 %_4, ptr %a_2, align 8
+				  ret i32 0
+				}
+
+				define i64 @fn_1() {
+				entry:
+				  ret i64 1
+				}
+				`
+			},
+		},
+		{
+			name: "function_calls/call_minus_call",
+
+			program: func() *ast.Program {
+				one := ast.NewFunction("one", []*ast.Statement{
+					ast.NewStatement(
+						ast.NewFunctionReturn(ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)})),
+					),
+				})
+				two := ast.NewFunction("two", []*ast.Statement{
+					ast.NewStatement(
+						ast.NewFunctionReturn(ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(2)})),
+					),
+				})
+
+				return ast.NewProgram([]*ast.Statement{
+					ast.NewStatement(one),
+					ast.NewStatement(two),
+					ast.NewStatement(
+						ast.NewVariable("a",
+							ast.NewExpression([]ast.DataNode{
+								ast.NewFunctionCall(two),
+								ast.NewExpressionMinus(ast.NewFunctionCall(one)),
+							}),
+						),
+					),
+				})
+			},
+
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %a_3 = call ptr @malloc(i64 8)
+				  %_4 = call i64 @two_2()
+				  %_5 = call i64 @one_1()
+				  %_6 = sub i64 %_4, %_5
+				  store i64 %_6, ptr %a_3, align 8
+				  ret i32 0
+				}
+
+				define i64 @one_1() {
+				entry:
+				  ret i64 1
+				}
+
+				define i64 @two_2() {
+				entry:
+				  ret i64 2
+				}
+				`
+			},
+		},
+		{
+			name: "function_calls/call_plus_variable",
+
+			program: func() *ast.Program {
+				function := ast.NewFunction("fn", []*ast.Statement{
+					ast.NewStatement(
+						ast.NewFunctionReturn(ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)})),
+					),
+				})
+				defB := ast.NewVariable("b", ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(5)}))
+
+				return ast.NewProgram([]*ast.Statement{
+					ast.NewStatement(function),
+					ast.NewStatement(defB),
+					ast.NewStatement(
+						ast.NewVariable("a",
+							ast.NewExpression([]ast.DataNode{
+								ast.NewFunctionCall(function),
+								ast.NewExpressionPlus(ast.NewVariableReference(defB)),
+							}),
+						),
+					),
+				})
+			},
+
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %b_2 = call ptr @malloc(i64 8)
+				  store i64 5, ptr %b_2, align 8
+				  %a_3 = call ptr @malloc(i64 8)
+				  %_4 = call i64 @fn_1()
+				  %b_v_5 = load i64, ptr %b_2, align 8
+				  %_6 = add i64 %_4, %b_v_5
+				  store i64 %_6, ptr %a_3, align 8
+				  ret i32 0
+				}
+
+				define i64 @fn_1() {
+				entry:
+				  ret i64 1
+				}
+				`
+			},
+		},
+		{
+			name: "function_calls/chained_call_expression",
+
+			program: func() *ast.Program {
+				function := ast.NewFunction("fn", []*ast.Statement{
+					ast.NewStatement(
+						ast.NewFunctionReturn(ast.NewExpression([]ast.DataNode{ast.NewLiteralInt(1)})),
+					),
+				})
+
+				return ast.NewProgram([]*ast.Statement{
+					ast.NewStatement(function),
+					ast.NewStatement(
+						ast.NewVariable("a",
+							ast.NewExpression([]ast.DataNode{
+								ast.NewFunctionCall(function),
+								ast.NewExpressionPlus(ast.NewFunctionCall(function)),
+								ast.NewExpressionMinus(ast.NewLiteralInt(2)),
+							}),
+						),
+					),
+				})
+			},
+
+			expected: func() string {
+				return commonLL + `
+				define i32 @main() {
+				entry:
+				  %a_2 = call ptr @malloc(i64 8)
+				  %_3 = call i64 @fn_1()
+				  %_4 = call i64 @fn_1()
+				  %_5 = add i64 %_3, %_4
+				  %_6 = sub i64 %_5, 2
+				  store i64 %_6, ptr %a_2, align 8
 				  ret i32 0
 				}
 
