@@ -7,6 +7,7 @@ const (
 	TypeStatement         Type = "Statement"
 	TypeVariable          Type = "Variable"
 	TypeFree              Type = "Free"
+	TypeDefer             Type = "Defer"
 	TypeFunction          Type = "Function"
 	TypeFunctionReturn    Type = "FunctionReturn"
 	TypeFunctionCall      Type = "FunctionCall"

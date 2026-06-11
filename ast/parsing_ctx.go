@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"fmt"
 	"iter"
 
 	"arrow_lang/token"
@@ -28,6 +29,10 @@ func (c *ParsingCtx) DiveScope() {
 }
 
 func (c *ParsingCtx) AscendScope() {
+	if len(c.scopePath) == 1 {
+		panic(fmt.Errorf("%w: trying to ascend top level scope", UnreachableErr))
+	}
+
 	c.scopePath = c.scopePath[:len(c.scopePath)-1]
 	c.Scope = c.scopePath[len(c.scopePath)-1]
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"time"
 
 	"arrow_lang/ast"
 	"arrow_lang/config"
@@ -42,7 +43,18 @@ func Compile(program *ast.Program, compilerConfig *config.Compiler) (err error) 
 		}
 	}
 
-	return llvmCompile(compilation, dotll)
+	err = llvmCompile(compilation, dotll)
+	if err != nil {
+		return errext.Tag("llvm compile", err)
+	}
+
+	duration := time.Now().
+		Sub(compilerConfig.StartedAt).
+		Round(100 * time.Microsecond).
+		String()
+
+	log.Println("compilation succeeded in", duration)
+	return nil
 }
 
 func writeDebug(
@@ -98,30 +110,30 @@ func initLLVM(compilation *Compilation) (err error) {
 func llvmCompile(compilation *Compilation, dotll llvm.Module) error {
 	objFile, err := os.CreateTemp("", compilation.config.OutputFilename()+".*.o")
 	if err != nil {
-		return errext.Tag("llvm create temp object file", err)
+		return errext.Tag("create temp object file", err)
 	}
 
 	defer func() {
 		if err = objFile.Close(); err != nil {
-			err = errext.Tag("llvm close temp object file", err)
+			err = errext.Tag("close temp object file", err)
 			log.Println(err)
 			return
 		}
 
 		if err = os.Remove(objFile.Name()); err != nil {
-			err = errext.Tag("llvm remove temp object file", err)
+			err = errext.Tag("remove temp object file", err)
 			log.Println(err)
 		}
 	}()
 
 	buf, err := compilation.targetMachine.EmitToMemoryBuffer(dotll, llvm.ObjectFile)
 	if err != nil {
-		return errext.Tag("llvm emit to memory buffer", err)
+		return errext.Tag("emit to memory buffer", err)
 	}
 
 	_, err = objFile.Write(buf.Bytes())
 	if err != nil {
-		return errext.Tag("llvm write temp object file", err)
+		return errext.Tag("write temp object file", err)
 	}
 
 	cmd := exec.CommandContext(compilation.config.Ctx,
@@ -129,6 +141,9 @@ func llvmCompile(compilation *Compilation, dotll llvm.Module) error {
 	)
 
 	output, err := cmd.CombinedOutput()
-	log.Println(string(output))
-	return errext.Tag("llvm compile object file", err)
+	if len(output) > 0 {
+		log.Println(string(output))
+	}
+
+	return errext.Tag("object file", err)
 }

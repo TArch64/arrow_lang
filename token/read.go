@@ -29,6 +29,9 @@ func Read(text io.Reader) iter.Seq[Token] {
 			case "ret":
 				yield(NewKeywordReturn())
 
+			case "defer":
+				yield(NewKeywordDefer())
+
 			case "=":
 				yield(NewOperatorAssign())
 

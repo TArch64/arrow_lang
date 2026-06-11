@@ -52,6 +52,9 @@ func (g *Generation) generateStatement(statement *ast.Statement) {
 	case *ast.FunctionReturn:
 		g.generateFunctionReturn(statement)
 
+	case *ast.Defer:
+		g.scope.AddDeferred(statement.Statement)
+
 	default:
 		panic(UnexpectedStatementErr)
 	}
@@ -68,14 +71,14 @@ func (g *Generation) generateVariable(variable *ast.Variable) {
 	)
 
 	g.builder.CreateStore(g.generateExpression(variable.Expression), def)
-	g.definedVariables[variable.Name] = def
+	g.scope.AddVariable(variable.Name, def)
 }
 
 func (g *Generation) generateFree(free *ast.Free) {
 	g.builder.CreateCall(
 		g.std.freeT,
 		g.std.free,
-		[]llvm.Value{g.definedVariables[free.Reference.Name]},
+		[]llvm.Value{g.scope.Variable(free.Reference.Name)},
 		"",
 	)
 }
@@ -89,17 +92,23 @@ func (g *Generation) generateFunction(function *ast.Function) {
 	entryBlock := g.ctx.AddBasicBlock(funcValue, "entry")
 	g.builder.SetInsertPointAtEnd(entryBlock)
 
+	g.diveScope()
+
 	for _, statement := range function.Statements {
 		g.generateStatement(statement)
 		g.builder.SetInsertPointAtEnd(entryBlock)
 	}
 
-	g.definedFunctions[function.Name] = &DefinedFunction{
-		Type:  funcType,
-		Value: funcValue,
-	}
+	g.ascendScope()
+	g.scope.AddFunction(function.Name, funcType, funcValue)
 }
 
 func (g *Generation) generateFunctionReturn(ret *ast.FunctionReturn) {
-	g.builder.CreateRet(g.generateExpression(ret.Expression))
+	returnValue := g.generateExpression(ret.Expression)
+
+	for _, statement := range g.scope.Deferred {
+		g.generateStatement(statement)
+	}
+
+	g.builder.CreateRet(returnValue)
 }

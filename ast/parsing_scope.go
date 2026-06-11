@@ -24,6 +24,10 @@ func (s *ParsingScope) NewChildScope() *ParsingScope {
 	return NewParsingScope(s)
 }
 
+func (s *ParsingScope) IsTopLevel() bool {
+	return s.parent == nil
+}
+
 func (s *ParsingScope) AddVariable(variable *Variable) {
 	s.definedVariables[variable.Name] = variable
 }

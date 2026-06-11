@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	"arrow_lang/ast"
 	"arrow_lang/compile"
@@ -13,8 +14,11 @@ import (
 )
 
 func main() {
+	log.SetFlags(0)
+
 	compilerConfig := &config.Compiler{
-		Ctx: context.Background(),
+		Ctx:       context.Background(),
+		StartedAt: time.Now(),
 	}
 
 	flag.StringVar(&compilerConfig.Input, "i", "", "input file name")

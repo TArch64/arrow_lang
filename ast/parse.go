@@ -45,6 +45,7 @@ func parseStatement(ctx *ParsingCtx) (*Statement, error) {
 		token.TypeKeywordDefine,
 		token.TypeKeywordFree,
 		token.TypeKeywordReturn,
+		token.TypeKeywordDefer,
 	)
 
 	if err != nil {
@@ -60,6 +61,9 @@ func parseStatement(ctx *ParsingCtx) (*Statement, error) {
 
 	case *token.KeywordReturn:
 		return parseFunctionReturn(ctx)
+
+	case *token.KeywordDefer:
+		return parseDefer(ctx)
 
 	default:
 		return nil, fmt.Errorf("%w: %s", UnexpectedTokenErr, expected.String())
@@ -228,6 +232,28 @@ func parseFunctionReturn(ctx *ParsingCtx) (*Statement, error) {
 	}
 
 	return NewStatement(NewFunctionReturn(expression)), nil
+}
+
+func parseDefer(ctx *ParsingCtx) (*Statement, error) {
+	if ctx.Scope.IsTopLevel() {
+		return nil, fmt.Errorf("%w: defer cannot be used in top level context", UnexpectedTokenErr)
+	}
+
+	statement, err := parseStatement(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	switch content := statement.Content.(type) {
+	case *Free:
+		// no transform
+	case *Function:
+		statement = NewStatement(NewFunctionCall(content))
+	default:
+		return nil, fmt.Errorf("%w: %s doesn't support defered exection", UnexpectedTokenErr, content.Type())
+	}
+
+	return NewStatement(NewDefer(statement)), nil
 }
 
 func parseFunctionCall(ctx *ParsingCtx, function *Function) (*FunctionCall, error) {

@@ -8,20 +8,15 @@ import (
 	"tinygo.org/x/go-llvm"
 )
 
-type DefinedFunction struct {
-	Type  llvm.Type
-	Value llvm.Value
-}
-
 type Generation struct {
-	ctx              llvm.Context
-	mod              llvm.Module
-	builder          llvm.Builder
-	targetData       llvm.TargetData
-	std              *GenerationStd
-	names            *GenerationNames
-	definedVariables map[string]llvm.Value
-	definedFunctions map[string]*DefinedFunction
+	ctx        llvm.Context
+	mod        llvm.Module
+	builder    llvm.Builder
+	targetData llvm.TargetData
+	std        *GenerationStd
+	names      *GenerationNames
+	scope      *GenerationScope
+	scopePath  []*GenerationScope
 }
 
 func (c *Compilation) newGeneration() *Generation {
@@ -32,16 +27,15 @@ func (c *Compilation) newGeneration() *Generation {
 	mod.SetTarget(c.targetTriple)
 
 	generation := &Generation{
-		ctx:              ctx,
-		mod:              mod,
-		builder:          ctx.NewBuilder(),
-		targetData:       c.targetData,
-		definedVariables: make(map[string]llvm.Value),
-		definedFunctions: make(map[string]*DefinedFunction),
+		ctx:        ctx,
+		mod:        mod,
+		builder:    ctx.NewBuilder(),
+		targetData: c.targetData,
 	}
 
 	generation.newStd()
 	generation.newNames()
+	generation.newScope()
 	return generation
 }
 
@@ -52,6 +46,9 @@ func (g *Generation) astToType(astType ast.DataType) llvm.Type {
 
 	case ast.DataFloat:
 		return g.std.doubleT
+
+	case ast.DataVoid:
+		return g.std.voidT
 
 	default:
 		panic(fmt.Errorf("%w: got %s", UnknownDataTypeErr, astType))

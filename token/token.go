@@ -9,6 +9,7 @@ const (
 	TypeOperatorMinus
 	TypeKeywordDefine
 	TypeKeywordFree
+	TypeKeywordDefer
 	TypeKeywordReturn
 	TypeLiteralInt
 	TypeLiteralFloat

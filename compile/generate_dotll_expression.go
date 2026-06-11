@@ -29,11 +29,11 @@ func (g *Generation) generateExpressionValue(node ast.DataNode) llvm.Value {
 		defName := node.Reference.Name
 		valueType := g.astToType(node.DataType())
 		valueName := g.names.WithPrefix(defName + "_v")
-		return g.builder.CreateLoad(valueType, g.definedVariables[defName], valueName)
+		return g.builder.CreateLoad(valueType, g.scope.Variable(defName), valueName)
 
 	case *ast.FunctionCall:
-		def := g.definedFunctions[node.Function.Name]
-		return g.builder.CreateCall(def.Type, def.Value, []llvm.Value{}, g.names.Random())
+		defType, defValue := g.scope.Function(node.Function.Name)
+		return g.builder.CreateCall(defType, defValue, []llvm.Value{}, g.names.Random())
 
 	default:
 		panic(errext.Tag("expression", UnreachableErr))

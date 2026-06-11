@@ -3,13 +3,15 @@ package config
 import (
 	"context"
 	"path"
+	"time"
 )
 
 type Compiler struct {
-	Input  string
-	Output string
-	Debug  bool
-	Ctx    context.Context
+	Input     string
+	Output    string
+	Debug     bool
+	Ctx       context.Context
+	StartedAt time.Time
 }
 
 func (c *Compiler) OutputDir() string {

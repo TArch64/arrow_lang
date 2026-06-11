@@ -10,848 +10,853 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestRead(t *testing.T) {
-	type testCase struct {
-		name     string
-		text     string
-		expected func() []Token
+func assertRead(t *testing.T, text string, expected []Token) {
+	t.Helper()
+	result := slices.Collect(Read(strings.NewReader(testutil.Dedent(text))))
+	if diff := cmp.Diff(result, expected); diff != "" {
+		t.Error(diff)
 	}
+}
 
-	var testCases = []testCase{
-		{
-			name: "basic/define_int",
-			text: "def a = 1",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-				}
-			},
-		},
-		{
-			name: "basic/define_negative_int",
-			text: "def a = -1",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(-1),
-				}
-			},
-		},
-		{
-			name: "basic/define_float",
-			text: "def a = 1.123",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralFloat(1.123),
-				}
-			},
-		},
-		{
-			name: "basic/define_negative_float",
-			text: "def a = -1.123",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralFloat(-1.123),
-				}
-			},
-		},
-		{
-			name: "basic/free_variable",
-			text: `
-				def a = 1
-				free a`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewKeywordFree(),
-					NewIdentifier("a"),
-				}
-			},
-		},
-		{
-			name:     "edge_cases/empty_input",
-			text:     "",
-			expected: func() []Token { return nil },
-		},
-		{
-			name:     "edge_cases/whitespace_only",
-			text:     "   \t\n  ",
-			expected: func() []Token { return nil },
-		},
-		{
-			name: "edge_cases/single_identifier",
-			text: "variable",
-			expected: func() []Token {
-				return []Token{
-					NewIdentifier("variable"),
-				}
-			},
-		},
-		{
-			name: "numbers/zero_integer",
-			text: "def a = 0",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(0),
-				}
-			},
-		},
-		{
-			name: "numbers/large_integer",
-			text: "def num = 999999999",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("num"),
-					NewOperatorAssign(),
-					NewLiteralInt(999999999),
-				}
-			},
-		},
-		{
-			name: "numbers/float_zero_fractional",
-			text: "def val = 1.0",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("val"),
-					NewOperatorAssign(),
-					NewLiteralFloat(1.0),
-				}
-			},
-		},
-		{
-			name: "numbers/float_leading_zero",
-			text: "def small = 0.123",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("small"),
-					NewOperatorAssign(),
-					NewLiteralFloat(0.123),
-				}
-			},
-		},
-		{
-			name: "numbers/high_precision_float",
-			text: "def pi = 3.14159265359",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("pi"),
-					NewOperatorAssign(),
-					NewLiteralFloat(3.14159265359),
-				}
-			},
-		},
-		{
-			name: "identifiers/with_numbers",
-			text: "def var123 = 5",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("var123"),
-					NewOperatorAssign(),
-					NewLiteralInt(5),
-				}
-			},
-		},
-		{
-			name: "identifiers/with_underscores",
-			text: "def my_variable = 10",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("my_variable"),
-					NewOperatorAssign(),
-					NewLiteralInt(10),
-				}
-			},
-		},
-		{
-			name: "identifiers/similar_to_keywords",
-			text: "def define = 1 def definition = 2",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("define"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewKeywordDefine(),
-					NewIdentifier("definition"),
-					NewOperatorAssign(),
-					NewLiteralInt(2),
-				}
-			},
-		},
-		{
-			name: "variables/assign_to_new_variable",
-			text: `
-				def a = 1
-				def b = a`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewKeywordDefine(),
-					NewIdentifier("b"),
-					NewOperatorAssign(),
-					NewIdentifier("a"),
-				}
-			},
-		},
-		{
-			name: "expressions/sum_integers",
-			text: `def a = 1 + 2`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewOperatorPlus(),
-					NewLiteralInt(2),
-				}
-			},
-		},
-		{
-			name: "expressions/sum_literal_and_variable",
-			text: `
-				def a = 1
-				def b = a + 2`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewKeywordDefine(),
-					NewIdentifier("b"),
-					NewOperatorAssign(),
-					NewIdentifier("a"),
-					NewOperatorPlus(),
-					NewLiteralInt(2),
-				}
-			},
-		},
-		{
-			name: "expressions/chained_additions",
-			text: "def result = 1 + 2 + 3",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("result"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewOperatorPlus(),
-					NewLiteralInt(2),
-					NewOperatorPlus(),
-					NewLiteralInt(3),
-				}
-			},
-		},
-		{
-			name: "expressions/mixed_int_float_addition",
-			text: "def result = 1 + 2.5",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("result"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewOperatorPlus(),
-					NewLiteralFloat(2.5),
-				}
-			},
-		},
-		{
-			name: "whitespace/newline_at_eof",
-			text: "def a = 1\n\n",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-				}
-			},
-		},
-		{
-			name: "whitespace/mixed_tabs_newlines",
-			text: "def\ta\t=\n1\n+\n2",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewOperatorPlus(),
-					NewLiteralInt(2),
-				}
-			},
-		},
-		{
-			name: "complex/multiple_definitions_and_operations",
-			text: "def x = 1 def y = 2.5 def z = x + y",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("x"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewKeywordDefine(),
-					NewIdentifier("y"),
-					NewOperatorAssign(),
-					NewLiteralFloat(2.5),
-					NewKeywordDefine(),
-					NewIdentifier("z"),
-					NewOperatorAssign(),
-					NewIdentifier("x"),
-					NewOperatorPlus(),
-					NewIdentifier("y"),
-				}
-			},
-		},
-		{
-			name: "expressions/subtract_integers",
-			text: `def a = 5 - 2`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(5),
-					NewOperatorMinus(),
-					NewLiteralInt(2),
-				}
-			},
-		},
-		{
-			name: "expressions/subtract_literal_and_variable",
-			text: `
-				def a = 10
-				def b = a - 3`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(10),
-					NewKeywordDefine(),
-					NewIdentifier("b"),
-					NewOperatorAssign(),
-					NewIdentifier("a"),
-					NewOperatorMinus(),
-					NewLiteralInt(3),
-				}
-			},
-		},
-		{
-			name: "expressions/subtract_variable_and_literal",
-			text: `
-				def a = 5
-				def b = 10 - a`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(5),
-					NewKeywordDefine(),
-					NewIdentifier("b"),
-					NewOperatorAssign(),
-					NewLiteralInt(10),
-					NewOperatorMinus(),
-					NewIdentifier("a"),
-				}
-			},
-		},
-		{
-			name: "expressions/chained_subtractions",
-			text: "def result = 10 - 3 - 2",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("result"),
-					NewOperatorAssign(),
-					NewLiteralInt(10),
-					NewOperatorMinus(),
-					NewLiteralInt(3),
-					NewOperatorMinus(),
-					NewLiteralInt(2),
-				}
-			},
-		},
-		{
-			name: "expressions/mixed_int_float_subtraction",
-			text: "def result = 5 - 2.5",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("result"),
-					NewOperatorAssign(),
-					NewLiteralInt(5),
-					NewOperatorMinus(),
-					NewLiteralFloat(2.5),
-				}
-			},
-		},
-		{
-			name: "expressions/float_subtraction",
-			text: "def result = 3.14 - 1.5",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("result"),
-					NewOperatorAssign(),
-					NewLiteralFloat(3.14),
-					NewOperatorMinus(),
-					NewLiteralFloat(1.5),
-				}
-			},
-		},
-		{
-			name: "expressions/subtract_from_zero",
-			text: "def negative = 0 - 5",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("negative"),
-					NewOperatorAssign(),
-					NewLiteralInt(0),
-					NewOperatorMinus(),
-					NewLiteralInt(5),
-				}
-			},
-		},
-		{
-			name: "expressions/mixed_addition_subtraction",
-			text: "def result = 1 + 2 - 3",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("result"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewOperatorPlus(),
-					NewLiteralInt(2),
-					NewOperatorMinus(),
-					NewLiteralInt(3),
-				}
-			},
-		},
-		{
-			name: "expressions/mixed_subtraction_addition",
-			text: "def result = 10 - 3 + 2",
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("result"),
-					NewOperatorAssign(),
-					NewLiteralInt(10),
-					NewOperatorMinus(),
-					NewLiteralInt(3),
-					NewOperatorPlus(),
-					NewLiteralInt(2),
-				}
-			},
-		},
-		{
-			name: "expressions/complex_arithmetic_with_variables",
-			text: `
-				def x = 5
-				def y = 3
-				def z = x + y - 2`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("x"),
-					NewOperatorAssign(),
-					NewLiteralInt(5),
-					NewKeywordDefine(),
-					NewIdentifier("y"),
-					NewOperatorAssign(),
-					NewLiteralInt(3),
-					NewKeywordDefine(),
-					NewIdentifier("z"),
-					NewOperatorAssign(),
-					NewIdentifier("x"),
-					NewOperatorPlus(),
-					NewIdentifier("y"),
-					NewOperatorMinus(),
-					NewLiteralInt(2),
-				}
-			},
-		},
-		{
-			name: "functions/basic_getter",
-			text: `def fn { ret 1 }`,
+func TestReadEmptyInput(t *testing.T) {
+	assertRead(t, "", nil)
+}
 
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(1),
-					NewCurlyBracketClose(),
-				}
-			},
-		},
-		{
-			name: "functions/return_zero",
-			text: `def zero { ret 0 }`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("zero"),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(0),
-					NewCurlyBracketClose(),
-				}
-			},
-		},
-		{
-			name: "functions/return_negative_int",
-			text: `def fn { ret -1 }`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(-1),
-					NewCurlyBracketClose(),
-				}
-			},
-		},
-		{
-			name: "functions/return_float",
-			text: `def pi { ret 3.14 }`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("pi"),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralFloat(3.14),
-					NewCurlyBracketClose(),
-				}
-			},
-		},
-		{
-			name: "functions/return_sum_expression",
-			text: `def fn { ret 1 + 2 }`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(1),
-					NewOperatorPlus(),
-					NewLiteralInt(2),
-					NewCurlyBracketClose(),
-				}
-			},
-		},
-		{
-			name: "functions/return_subtraction_expression",
-			text: `def fn { ret 10 - 3 }`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(10),
-					NewOperatorMinus(),
-					NewLiteralInt(3),
-					NewCurlyBracketClose(),
-				}
-			},
-		},
-		{
-			name: "functions/return_mixed_expression",
-			text: `def fn { ret 1 + 2 - 3 }`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(1),
-					NewOperatorPlus(),
-					NewLiteralInt(2),
-					NewOperatorMinus(),
-					NewLiteralInt(3),
-					NewCurlyBracketClose(),
-				}
-			},
-		},
-		{
-			name: "functions/multiple_getters",
-			text: `
-				def one { ret 1 }
-				def two { ret 2 }`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("one"),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(1),
-					NewCurlyBracketClose(),
-					NewKeywordDefine(),
-					NewIdentifier("two"),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(2),
-					NewCurlyBracketClose(),
-				}
-			},
-		},
-		{
-			name: "functions/getter_multiline_body",
-			text: `
-				def fn {
-					ret 42
-				}`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(42),
-					NewCurlyBracketClose(),
-				}
-			},
-		},
-		{
-			name: "functions/getter_with_local_variable",
-			text: `def fn() { def x = 1 ret x }`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewCurlyBracketOpen(),
-					NewKeywordDefine(),
-					NewIdentifier("x"),
-					NewOperatorAssign(),
-					NewLiteralInt(1),
-					NewKeywordReturn(),
-					NewIdentifier("x"),
-					NewCurlyBracketClose(),
-				}
-			},
-		},
-		{
-			name: "functions/basic_getter_call",
-			text: `
-				def fn() { ret 1 }
-				def a = fn()`,
+func TestReadWhitespaceOnly(t *testing.T) {
+	assertRead(t, "   \t\n  ", nil)
+}
 
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(1),
-					NewCurlyBracketClose(),
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-				}
-			},
-		},
-		{
-			name: "function_calls/call_plus_literal",
-			text: `
-				def fn() { ret 1 }
-				def a = fn() + 2`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(1),
-					NewCurlyBracketClose(),
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewOperatorPlus(),
-					NewLiteralInt(2),
-				}
-			},
-		},
-		{
-			name: "function_calls/literal_plus_call",
-			text: `
-				def fn() { ret 1 }
-				def a = 2 + fn()`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(1),
-					NewCurlyBracketClose(),
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewLiteralInt(2),
-					NewOperatorPlus(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-				}
-			},
-		},
-		{
-			name: "function_calls/call_minus_call",
-			text: `
-				def one() { ret 1 }
-				def two() { ret 2 }
-				def a = two() - one()`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("one"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(1),
-					NewCurlyBracketClose(),
-					NewKeywordDefine(),
-					NewIdentifier("two"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(2),
-					NewCurlyBracketClose(),
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewIdentifier("two"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewOperatorMinus(),
-					NewIdentifier("one"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-				}
-			},
-		},
-		{
-			name: "function_calls/call_plus_variable",
-			text: `
-				def fn() { ret 1 }
-				def b = 5
-				def a = fn() + b`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(1),
-					NewCurlyBracketClose(),
-					NewKeywordDefine(),
-					NewIdentifier("b"),
-					NewOperatorAssign(),
-					NewLiteralInt(5),
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewOperatorPlus(),
-					NewIdentifier("b"),
-				}
-			},
-		},
-		{
-			name: "function_calls/chained_call_expression",
-			text: `
-				def fn() { ret 1 }
-				def a = fn() + fn() - 2`,
-			expected: func() []Token {
-				return []Token{
-					NewKeywordDefine(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewCurlyBracketOpen(),
-					NewKeywordReturn(),
-					NewLiteralInt(1),
-					NewCurlyBracketClose(),
-					NewKeywordDefine(),
-					NewIdentifier("a"),
-					NewOperatorAssign(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewOperatorPlus(),
-					NewIdentifier("fn"),
-					NewParenthesesOpen(),
-					NewParenthesesClose(),
-					NewOperatorMinus(),
-					NewLiteralInt(2),
-				}
-			},
-		},
-	}
+func TestReadDefineInt(t *testing.T) {
+	assertRead(t, "def a = 1", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+	})
+}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			text := testutil.Dedent(tc.text)
-			result := slices.Collect(Read(strings.NewReader(text)))
-			if diff := cmp.Diff(result, tc.expected()); diff != "" {
-				t.Error(diff)
-			}
-		})
-	}
+func TestReadDefineNegativeInt(t *testing.T) {
+	assertRead(t, "def a = -1", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(-1),
+	})
+}
+
+func TestReadDefineZeroInt(t *testing.T) {
+	assertRead(t, "def a = 0", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(0),
+	})
+}
+
+func TestReadDefineLargeInt(t *testing.T) {
+	assertRead(t, "def num = 999999999", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("num"),
+		NewOperatorAssign(),
+		NewLiteralInt(999999999),
+	})
+}
+
+func TestReadDefineFloat(t *testing.T) {
+	assertRead(t, "def a = 1.123", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralFloat(1.123),
+	})
+}
+
+func TestReadDefineNegativeFloat(t *testing.T) {
+	assertRead(t, "def a = -1.123", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralFloat(-1.123),
+	})
+}
+
+func TestReadDefineWholeNumberFloat(t *testing.T) {
+	assertRead(t, "def val = 1.0", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("val"),
+		NewOperatorAssign(),
+		NewLiteralFloat(1.0),
+	})
+}
+
+func TestReadDefineLeadingZeroFloat(t *testing.T) {
+	assertRead(t, "def small = 0.123", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("small"),
+		NewOperatorAssign(),
+		NewLiteralFloat(0.123),
+	})
+}
+
+func TestReadDefineHighPrecisionFloat(t *testing.T) {
+	assertRead(t, "def pi = 3.14159265359", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("pi"),
+		NewOperatorAssign(),
+		NewLiteralFloat(3.14159265359),
+	})
+}
+
+func TestReadSingleIdentifier(t *testing.T) {
+	assertRead(t, "variable", []Token{
+		NewIdentifier("variable"),
+	})
+}
+
+func TestReadIdentifierWithDigits(t *testing.T) {
+	assertRead(t, "def var123 = 5", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("var123"),
+		NewOperatorAssign(),
+		NewLiteralInt(5),
+	})
+}
+
+func TestReadIdentifierWithUnderscores(t *testing.T) {
+	assertRead(t, "def my_variable = 10", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("my_variable"),
+		NewOperatorAssign(),
+		NewLiteralInt(10),
+	})
+}
+
+func TestReadKeywordPrefixedIdentifiers(t *testing.T) {
+	assertRead(t, "def define = 1 def definition = 2", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("define"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordDefine(),
+		NewIdentifier("definition"),
+		NewOperatorAssign(),
+		NewLiteralInt(2),
+	})
+}
+
+func TestReadDefineFromVariable(t *testing.T) {
+	assertRead(t, `
+		def a = 1
+		def b = a`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordDefine(),
+		NewIdentifier("b"),
+		NewOperatorAssign(),
+		NewIdentifier("a"),
+	})
+}
+
+func TestReadFreeVariable(t *testing.T) {
+	assertRead(t, `
+		def a = 1
+		free a`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordFree(),
+		NewIdentifier("a"),
+	})
+}
+
+func TestReadAddition(t *testing.T) {
+	assertRead(t, `def a = 1 + 2`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewOperatorPlus(),
+		NewLiteralInt(2),
+	})
+}
+
+func TestReadAdditionWithVariable(t *testing.T) {
+	assertRead(t, `
+		def a = 1
+		def b = a + 2`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordDefine(),
+		NewIdentifier("b"),
+		NewOperatorAssign(),
+		NewIdentifier("a"),
+		NewOperatorPlus(),
+		NewLiteralInt(2),
+	})
+}
+
+func TestReadChainedAddition(t *testing.T) {
+	assertRead(t, "def result = 1 + 2 + 3", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("result"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewOperatorPlus(),
+		NewLiteralInt(2),
+		NewOperatorPlus(),
+		NewLiteralInt(3),
+	})
+}
+
+func TestReadAdditionWithFloat(t *testing.T) {
+	assertRead(t, "def result = 1 + 2.5", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("result"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewOperatorPlus(),
+		NewLiteralFloat(2.5),
+	})
+}
+
+func TestReadSubtraction(t *testing.T) {
+	assertRead(t, `def a = 5 - 2`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(5),
+		NewOperatorMinus(),
+		NewLiteralInt(2),
+	})
+}
+
+func TestReadSubtractionWithVariableLeft(t *testing.T) {
+	assertRead(t, `
+		def a = 10
+		def b = a - 3`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(10),
+		NewKeywordDefine(),
+		NewIdentifier("b"),
+		NewOperatorAssign(),
+		NewIdentifier("a"),
+		NewOperatorMinus(),
+		NewLiteralInt(3),
+	})
+}
+
+func TestReadSubtractionWithVariableRight(t *testing.T) {
+	assertRead(t, `
+		def a = 5
+		def b = 10 - a`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(5),
+		NewKeywordDefine(),
+		NewIdentifier("b"),
+		NewOperatorAssign(),
+		NewLiteralInt(10),
+		NewOperatorMinus(),
+		NewIdentifier("a"),
+	})
+}
+
+func TestReadChainedSubtraction(t *testing.T) {
+	assertRead(t, "def result = 10 - 3 - 2", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("result"),
+		NewOperatorAssign(),
+		NewLiteralInt(10),
+		NewOperatorMinus(),
+		NewLiteralInt(3),
+		NewOperatorMinus(),
+		NewLiteralInt(2),
+	})
+}
+
+func TestReadSubtractionFromZero(t *testing.T) {
+	assertRead(t, "def negative = 0 - 5", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("negative"),
+		NewOperatorAssign(),
+		NewLiteralInt(0),
+		NewOperatorMinus(),
+		NewLiteralInt(5),
+	})
+}
+
+func TestReadSubtractionWithFloat(t *testing.T) {
+	assertRead(t, "def result = 5 - 2.5", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("result"),
+		NewOperatorAssign(),
+		NewLiteralInt(5),
+		NewOperatorMinus(),
+		NewLiteralFloat(2.5),
+	})
+}
+
+func TestReadSubtractionBetweenFloats(t *testing.T) {
+	assertRead(t, "def result = 3.14 - 1.5", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("result"),
+		NewOperatorAssign(),
+		NewLiteralFloat(3.14),
+		NewOperatorMinus(),
+		NewLiteralFloat(1.5),
+	})
+}
+
+func TestReadAdditionThenSubtraction(t *testing.T) {
+	assertRead(t, "def result = 1 + 2 - 3", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("result"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewOperatorPlus(),
+		NewLiteralInt(2),
+		NewOperatorMinus(),
+		NewLiteralInt(3),
+	})
+}
+
+func TestReadSubtractionThenAddition(t *testing.T) {
+	assertRead(t, "def result = 10 - 3 + 2", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("result"),
+		NewOperatorAssign(),
+		NewLiteralInt(10),
+		NewOperatorMinus(),
+		NewLiteralInt(3),
+		NewOperatorPlus(),
+		NewLiteralInt(2),
+	})
+}
+
+func TestReadMultipleDefinitions(t *testing.T) {
+	assertRead(t, "def x = 1 def y = 2.5 def z = x + y", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("x"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordDefine(),
+		NewIdentifier("y"),
+		NewOperatorAssign(),
+		NewLiteralFloat(2.5),
+		NewKeywordDefine(),
+		NewIdentifier("z"),
+		NewOperatorAssign(),
+		NewIdentifier("x"),
+		NewOperatorPlus(),
+		NewIdentifier("y"),
+	})
+}
+
+func TestReadExpressionWithVariables(t *testing.T) {
+	assertRead(t, `
+		def x = 5
+		def y = 3
+		def z = x + y - 2`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("x"),
+		NewOperatorAssign(),
+		NewLiteralInt(5),
+		NewKeywordDefine(),
+		NewIdentifier("y"),
+		NewOperatorAssign(),
+		NewLiteralInt(3),
+		NewKeywordDefine(),
+		NewIdentifier("z"),
+		NewOperatorAssign(),
+		NewIdentifier("x"),
+		NewOperatorPlus(),
+		NewIdentifier("y"),
+		NewOperatorMinus(),
+		NewLiteralInt(2),
+	})
+}
+
+func TestReadTrailingNewlines(t *testing.T) {
+	assertRead(t, "def a = 1\n\n", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+	})
+}
+
+func TestReadTabsAndNewlinesAsSeparators(t *testing.T) {
+	assertRead(t, "def\ta\t=\n1\n+\n2", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewOperatorPlus(),
+		NewLiteralInt(2),
+	})
+}
+
+func TestReadFunction(t *testing.T) {
+	assertRead(t, `def fn() { ret 1 }`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(1),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadFunctionReturnZero(t *testing.T) {
+	assertRead(t, `def zero() { ret 0 }`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("zero"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(0),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadFunctionReturnNegativeInt(t *testing.T) {
+	assertRead(t, `def fn() { ret -1 }`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(-1),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadFunctionReturnFloat(t *testing.T) {
+	assertRead(t, `def pi() { ret 3.14 }`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("pi"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralFloat(3.14),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadFunctionReturnAddition(t *testing.T) {
+	assertRead(t, `def fn() { ret 1 + 2 }`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(1),
+		NewOperatorPlus(),
+		NewLiteralInt(2),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadFunctionReturnSubtraction(t *testing.T) {
+	assertRead(t, `def fn() { ret 10 - 3 }`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(10),
+		NewOperatorMinus(),
+		NewLiteralInt(3),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadFunctionReturnMixedExpression(t *testing.T) {
+	assertRead(t, `def fn() { ret 1 + 2 - 3 }`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(1),
+		NewOperatorPlus(),
+		NewLiteralInt(2),
+		NewOperatorMinus(),
+		NewLiteralInt(3),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadFunctionMultilineBody(t *testing.T) {
+	assertRead(t, `
+		def fn() {
+			ret 42
+		}`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(42),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadFunctionWithLocalVariable(t *testing.T) {
+	assertRead(t, `def fn() { def x = 1 ret x }`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordDefine(),
+		NewIdentifier("x"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordReturn(),
+		NewIdentifier("x"),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadMultipleFunctions(t *testing.T) {
+	assertRead(t, `
+		def one() { ret 1 }
+		def two() { ret 2 }`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("one"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(1),
+		NewCurlyBracketClose(),
+		NewKeywordDefine(),
+		NewIdentifier("two"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(2),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadFunctionCall(t *testing.T) {
+	assertRead(t, `
+		def fn() { ret 1 }
+		def a = fn()`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(1),
+		NewCurlyBracketClose(),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+	})
+}
+
+func TestReadCallPlusLiteral(t *testing.T) {
+	assertRead(t, `
+		def fn() { ret 1 }
+		def a = fn() + 2`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(1),
+		NewCurlyBracketClose(),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewOperatorPlus(),
+		NewLiteralInt(2),
+	})
+}
+
+func TestReadLiteralPlusCall(t *testing.T) {
+	assertRead(t, `
+		def fn() { ret 1 }
+		def a = 2 + fn()`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(1),
+		NewCurlyBracketClose(),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(2),
+		NewOperatorPlus(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+	})
+}
+
+func TestReadCallMinusCall(t *testing.T) {
+	assertRead(t, `
+		def one() { ret 1 }
+		def two() { ret 2 }
+		def a = two() - one()`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("one"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(1),
+		NewCurlyBracketClose(),
+		NewKeywordDefine(),
+		NewIdentifier("two"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(2),
+		NewCurlyBracketClose(),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewIdentifier("two"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewOperatorMinus(),
+		NewIdentifier("one"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+	})
+}
+
+func TestReadCallPlusVariable(t *testing.T) {
+	assertRead(t, `
+		def fn() { ret 1 }
+		def b = 5
+		def a = fn() + b`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(1),
+		NewCurlyBracketClose(),
+		NewKeywordDefine(),
+		NewIdentifier("b"),
+		NewOperatorAssign(),
+		NewLiteralInt(5),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewOperatorPlus(),
+		NewIdentifier("b"),
+	})
+}
+
+func TestReadChainedCallExpression(t *testing.T) {
+	assertRead(t, `
+		def fn() { ret 1 }
+		def a = fn() + fn() - 2`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordReturn(),
+		NewLiteralInt(1),
+		NewCurlyBracketClose(),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewOperatorPlus(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewOperatorMinus(),
+		NewLiteralInt(2),
+	})
+}
+
+func TestReadDeferFree(t *testing.T) {
+	assertRead(t, `
+		def fn() {
+			def a = 1
+			defer free a
+			ret a
+		}`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordDefer(),
+		NewKeywordFree(),
+		NewIdentifier("a"),
+		NewKeywordReturn(),
+		NewIdentifier("a"),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadDeferInlineFunctionBody(t *testing.T) {
+	assertRead(t, `def fn() { def a = 1 defer free a ret a }`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordDefer(),
+		NewKeywordFree(),
+		NewIdentifier("a"),
+		NewKeywordReturn(),
+		NewIdentifier("a"),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadMultipleDefers(t *testing.T) {
+	assertRead(t, `
+		def fn() {
+			def a = 1
+			def b = 2
+			defer free a
+			defer free b
+			ret a
+		}`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordDefine(),
+		NewIdentifier("b"),
+		NewOperatorAssign(),
+		NewLiteralInt(2),
+		NewKeywordDefer(),
+		NewKeywordFree(),
+		NewIdentifier("a"),
+		NewKeywordDefer(),
+		NewKeywordFree(),
+		NewIdentifier("b"),
+		NewKeywordReturn(),
+		NewIdentifier("a"),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadDeferTabSeparated(t *testing.T) {
+	assertRead(t, "def fn() {\n\tdef a = 1\n\tdefer\tfree\ta\n\tret a\n}", []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordDefer(),
+		NewKeywordFree(),
+		NewIdentifier("a"),
+		NewKeywordReturn(),
+		NewIdentifier("a"),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadDeferMultilineSeparated(t *testing.T) {
+	assertRead(t, `
+		def fn() {
+			def a = 1
+			defer
+			free a
+			ret a
+		}`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordDefine(),
+		NewIdentifier("a"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordDefer(),
+		NewKeywordFree(),
+		NewIdentifier("a"),
+		NewKeywordReturn(),
+		NewIdentifier("a"),
+		NewCurlyBracketClose(),
+	})
+}
+
+func TestReadDeferKeywordPrefixedIdentifier(t *testing.T) {
+	assertRead(t, `
+		def fn() {
+			def deferred = 1
+			ret deferred
+		}`, []Token{
+		NewKeywordDefine(),
+		NewIdentifier("fn"),
+		NewParenthesesOpen(),
+		NewParenthesesClose(),
+		NewCurlyBracketOpen(),
+		NewKeywordDefine(),
+		NewIdentifier("deferred"),
+		NewOperatorAssign(),
+		NewLiteralInt(1),
+		NewKeywordReturn(),
+		NewIdentifier("deferred"),
+		NewCurlyBracketClose(),
+	})
 }
